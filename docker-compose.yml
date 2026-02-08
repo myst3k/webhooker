@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: webhooker
+      POSTGRES_PASSWORD: webhooker
+      POSTGRES_DB: webhooker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U webhooker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://webhooker:webhooker@db:5432/webhooker
+      JWT_SECRET: change-me-in-production
+      WEBHOOKER_ENCRYPTION_KEY: change-me-to-a-32-char-string!!
+      WEBHOOKER_HOST: 0.0.0.0
+      WEBHOOKER_PORT: "3000"
+      WEBHOOKER_BASE_URL: http://localhost:3000
+      WEBHOOKER_LOG_LEVEL: info
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:

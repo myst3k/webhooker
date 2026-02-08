@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ endpoint.name }} - Submissions{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <ul class="uk-breadcrumb">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/projects/{{ project_name|lower }}">{{ project_name }}</a></li>
+            <li><span>{{ endpoint.name }}</span></li>
+        </ul>
+
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-bottom" uk-grid>
+            <div>
+                <h2 class="uk-margin-remove">{{ endpoint.name }}</h2>
+            </div>
+            <div>
+                <a href="/endpoints/{{ endpoint.slug }}/snippet" class="uk-button uk-button-default uk-button-small">Snippet</a>
+                <a href="/endpoints/{{ endpoint.slug }}/actions" class="uk-button uk-button-default uk-button-small">Actions</a>
+                <a href="/endpoints/{{ endpoint.slug }}/settings" class="uk-button uk-button-default uk-button-small">Settings</a>
+            </div>
+        </div>
+
+        <p><code>POST {{ base_url }}/v1/e/{{ endpoint_id }}</code></p>
+
+        <div class="uk-margin">
+            <input class="uk-input" type="search" placeholder="Search submissions..."
+                   hx-get="/htmx/submissions/{{ endpoint_id }}"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#submissions-table"
+                   hx-include="this"
+                   name="search">
+        </div>
+
+        <div class="uk-margin-small-bottom">
+            <a href="/api/v1/endpoints/{{ endpoint_id }}/submissions/export?format=csv"
+               target="_blank" class="uk-button uk-button-default uk-button-small">Export CSV</a>
+            <a href="/api/v1/endpoints/{{ endpoint_id }}/submissions/export?format=json"
+               target="_blank" class="uk-button uk-button-default uk-button-small">Export JSON</a>
+        </div>
+
+        <div id="submissions-table"
+             hx-get="/htmx/submissions/{{ endpoint_id }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="uk-text-center uk-padding">
+                <div uk-spinner></div>
+                <p class="uk-text-muted">Loading submissions...</p>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

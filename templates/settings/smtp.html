@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}SMTP Settings{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <h2>Tenant SMTP Configuration</h2>
+        <p class="uk-text-meta">Configure SMTP for action emails. This is separate from system SMTP used for password resets.</p>
+
+        <div class="narrow-content">
+            <form id="smtp-form" class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-host">SMTP Host</label>
+                    <input class="uk-input" type="text" id="smtp-host" value="{{ smtp_host }}" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-port">Port</label>
+                    <input class="uk-input uk-form-width-small" type="number" id="smtp-port" value="{{ smtp_port }}" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-user">Username</label>
+                    <input class="uk-input" type="text" id="smtp-user" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-pass">Password</label>
+                    <input class="uk-input" type="password" id="smtp-pass" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-from">From Address</label>
+                    <input class="uk-input" type="email" id="smtp-from" value="{{ smtp_from }}" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-from-name">From Name (optional)</label>
+                    <input class="uk-input" type="text" id="smtp-from-name" value="{{ smtp_from_name }}">
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="smtp-tls">TLS Mode</label>
+                    <select class="uk-select" id="smtp-tls">
+                        <option value="starttls" {% if smtp_tls == "starttls" %}selected{% endif %}>STARTTLS</option>
+                        <option value="tls" {% if smtp_tls == "tls" %}selected{% endif %}>TLS</option>
+                        <option value="none" {% if smtp_tls == "none" %}selected{% endif %}>None</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button class="uk-button uk-button-primary" type="button" onclick="saveSMTP()">Save</button>
+                    <button class="uk-button uk-button-default" type="button" onclick="testSMTP()">Send Test Email</button>
+                    {% if smtp_configured %}
+                    <button class="uk-button uk-button-danger" type="button" onclick="deleteSMTP()">Remove</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+async function saveSMTP() {
+    const res = await fetch('/api/v1/tenant/smtp', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            host: document.getElementById('smtp-host').value,
+            port: parseInt(document.getElementById('smtp-port').value),
+            username: document.getElementById('smtp-user').value,
+            password: document.getElementById('smtp-pass').value,
+            from_address: document.getElementById('smtp-from').value,
+            from_name: document.getElementById('smtp-from-name').value || null,
+            tls_mode: document.getElementById('smtp-tls').value
+        })
+    });
+    const d = await res.json();
+    alert(d.message || d.error);
+    if (res.ok) location.reload();
+}
+
+async function testSMTP() {
+    const to = prompt('Send test email to:');
+    if (!to) return;
+    const res = await fetch('/api/v1/tenant/smtp/test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({to})
+    });
+    const d = await res.json();
+    alert(d.message || d.error);
+}
+
+async function deleteSMTP() {
+    if (!confirm('Remove SMTP configuration?')) return;
+    const res = await fetch('/api/v1/tenant/smtp', {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) location.reload();
+}
+</script>
+{% endblock %}

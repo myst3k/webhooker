@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Admin - Users{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
+            <h2 class="uk-margin-remove">Users</h2>
+            <button class="uk-button uk-button-primary uk-button-small"
+                    onclick="UIkit.modal('#new-user-dialog').show()">New User</button>
+        </div>
+
+        <div class="uk-card uk-card-default">
+            <div class="uk-overflow-auto">
+                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Admin</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td><span class="uk-label">{{ user.role }}</span></td>
+                            <td>{% if user.is_system_admin %}<span class="uk-label uk-label-success">Yes</span>{% else %}<span class="uk-label uk-label-danger">No</span>{% endif %}</td>
+                            <td>{{ user.created_at.format("%Y-%m-%d") }}</td>
+                            <td>
+                                <button class="uk-button uk-button-default uk-button-small"
+                                        onclick="deleteUser('{{ user.id }}','{{ user.name }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="new-user-dialog" uk-modal>
+    <div class="uk-modal-dialog">
+        <button class="uk-modal-close-default" type="button" uk-close></button>
+        <div class="uk-modal-header">
+            <h2 class="uk-modal-title">New User</h2>
+        </div>
+        <div class="uk-modal-body">
+            <form class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="user-name">Name</label>
+                    <input class="uk-input" type="text" id="user-name" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="user-email">Email</label>
+                    <input class="uk-input" type="email" id="user-email" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="user-password">Password</label>
+                    <input class="uk-input" type="password" id="user-password" required minlength="8">
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="user-tenant">Tenant</label>
+                    <select class="uk-select" id="user-tenant" required>
+                        <option value="">Select a tenant...</option>
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="user-role">Role</label>
+                    <select class="uk-select" id="user-role">
+                        <option value="member">Member</option>
+                        <option value="owner">Owner</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="uk-modal-footer uk-text-right">
+            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary" type="button" onclick="createUser()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+async function createUser() {
+    const res = await fetch('/api/v1/admin/users', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            name: document.getElementById('user-name').value,
+            email: document.getElementById('user-email').value,
+            password: document.getElementById('user-password').value,
+            tenant_id: document.getElementById('user-tenant').value,
+            role: document.getElementById('user-role').value
+        })
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+
+async function deleteUser(id, name) {
+    if (!confirm(`Delete user "${name}"?`)) return;
+    const res = await fetch(`/api/v1/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+</script>
+{% endblock %}

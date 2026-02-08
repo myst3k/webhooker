@@ -1,0 +1,38 @@
+<aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <a href="/dashboard"><span uk-icon="icon: bolt; ratio: 1.1"></span> Webhooker</a>
+    </div>
+    <ul class="uk-nav uk-nav-default uk-margin-top">
+        <li class="uk-nav-header">Navigation</li>
+        <li><a href="/dashboard"><span uk-icon="icon: home; ratio: 0.8" class="uk-margin-small-right"></span>Dashboard</a></li>
+        <li class="uk-nav-divider"></li>
+        <li class="uk-nav-header">Settings</li>
+        <li><a href="/settings"><span uk-icon="icon: user; ratio: 0.8" class="uk-margin-small-right"></span>Account</a></li>
+        <li><a href="/settings/members"><span uk-icon="icon: users; ratio: 0.8" class="uk-margin-small-right"></span>Team</a></li>
+        <li><a href="/settings/smtp"><span uk-icon="icon: mail; ratio: 0.8" class="uk-margin-small-right"></span>SMTP</a></li>
+        {% if is_system_admin %}
+        <li class="uk-nav-divider"></li>
+        <li class="uk-nav-header">Admin</li>
+        <li><a href="/admin/tenants"><span uk-icon="icon: world; ratio: 0.8" class="uk-margin-small-right"></span>Tenants</a></li>
+        <li><a href="/admin/users"><span uk-icon="icon: users; ratio: 0.8" class="uk-margin-small-right"></span>Users</a></li>
+        {% endif %}
+    </ul>
+    <div class="sidebar-footer">
+        <span class="uk-text-small uk-text-muted">{{ user_name }}</span>
+        <a href="#" class="uk-text-small"
+           onclick="fetch('/api/v1/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:''})}).then(()=>{document.cookie='access_token=;path=/;max-age=0';document.cookie='refresh_token=;path=/;max-age=0';location.href='/';})">
+            <span uk-icon="icon: sign-out; ratio: 0.8"></span> Logout
+        </a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"
+     onclick="document.getElementById('sidebar').classList.remove('open');this.classList.remove('active');"></div>
+<nav class="mobile-nav uk-navbar-container" uk-navbar>
+    <div class="uk-navbar-left">
+        <a class="uk-navbar-toggle" href="#"
+           onclick="event.preventDefault();document.getElementById('sidebar').classList.add('open');document.getElementById('sidebar-overlay').classList.add('active');">
+            <span uk-navbar-toggle-icon></span>
+        </a>
+        <a href="/dashboard" class="uk-navbar-item uk-logo">Webhooker</a>
+    </div>
+</nav>

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Team Members{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
+            <h2 class="uk-margin-remove">Team Members</h2>
+            {% if is_owner || is_system_admin %}
+            <button class="uk-button uk-button-primary uk-button-small"
+                    onclick="UIkit.modal('#add-member-dialog').show()">Add Member</button>
+            {% endif %}
+        </div>
+
+        <div class="uk-card uk-card-default">
+            <div class="uk-overflow-auto">
+                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td>{{ member.name }}{% if member.is_system_admin %} <span class="uk-label">Admin</span>{% endif %}</td>
+                            <td>{{ member.email }}</td>
+                            <td><span class="uk-label">{{ member.role }}</span></td>
+                            <td>
+                                {% if is_owner || is_system_admin %}
+                                <button class="uk-button uk-button-default uk-button-small"
+                                        onclick="removeMember('{{ member.id }}','{{ member.name }}')">Remove</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+{% if is_owner || is_system_admin %}
+<div id="add-member-dialog" uk-modal>
+    <div class="uk-modal-dialog">
+        <button class="uk-modal-close-default" type="button" uk-close></button>
+        <div class="uk-modal-header">
+            <h2 class="uk-modal-title">Add Member</h2>
+        </div>
+        <div class="uk-modal-body">
+            <form id="add-member-form" class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="member-name">Name</label>
+                    <input class="uk-input" type="text" id="member-name" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="member-email">Email</label>
+                    <input class="uk-input" type="email" id="member-email" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="member-password">Password</label>
+                    <input class="uk-input" type="password" id="member-password" required minlength="8">
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="member-role">Role</label>
+                    <select class="uk-select" id="member-role">
+                        <option value="member">Member</option>
+                        <option value="owner">Owner</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="uk-modal-footer uk-text-right">
+            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary" type="button" onclick="addMember()">Add</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+async function addMember() {
+    const res = await fetch('/api/v1/tenant/members', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            name: document.getElementById('member-name').value,
+            email: document.getElementById('member-email').value,
+            password: document.getElementById('member-password').value,
+            role: document.getElementById('member-role').value
+        })
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+
+async function removeMember(id, name) {
+    if (!confirm(`Remove ${name}?`)) return;
+    const res = await fetch(`/api/v1/tenant/members/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+</script>
+{% endif %}
+{% endblock %}

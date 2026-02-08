@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ endpoint.name }} - Actions{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <ul class="uk-breadcrumb">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/endpoints/{{ endpoint.slug }}">{{ endpoint.name }}</a></li>
+            <li><span>Actions</span></li>
+        </ul>
+
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
+            <h2 class="uk-margin-remove">Action Pipeline</h2>
+            <button class="uk-button uk-button-primary uk-button-small"
+                    onclick="UIkit.modal('#new-action-dialog').show()">Add Action</button>
+        </div>
+
+        <p class="uk-text-meta">Actions execute in order after each submission. Failures don't stop the pipeline.</p>
+
+        {% if actions.is_empty() %}
+        <div class="empty-state">
+            <p><span uk-icon="icon: cog; ratio: 2" class="uk-text-muted"></span></p>
+            <p>No actions configured. Add one to start processing submissions.</p>
+        </div>
+        {% else %}
+        <div class="uk-card uk-card-default">
+            <div class="uk-overflow-auto">
+                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Type</th>
+                            <th>Enabled</th>
+                            <th>Config</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for action in actions %}
+                        <tr>
+                            <td>{{ action.position }}</td>
+                            <td><strong>{{ action.action_type }}</strong></td>
+                            <td>{% if action.enabled %}<span class="uk-label uk-label-success">Yes</span>{% else %}<span class="uk-label uk-label-danger">No</span>{% endif %}</td>
+                            <td><code class="uk-text-small" style="word-break:break-all;">{{ action.config }}</code></td>
+                            <td>
+                                <button class="uk-button uk-button-default uk-button-small"
+                                        onclick="deleteAction('{{ action.id }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<div id="new-action-dialog" uk-modal>
+    <div class="uk-modal-dialog">
+        <button class="uk-modal-close-default" type="button" uk-close></button>
+        <div class="uk-modal-header">
+            <h2 class="uk-modal-title">Add Action</h2>
+        </div>
+        <div class="uk-modal-body">
+            <form id="new-action-form" class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="action-type">Type</label>
+                    <select class="uk-select" id="action-type">
+                        {% for module in available_modules %}
+                        <option value="{{ module.id }}">{{ module.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="action-config">Config (JSON)</label>
+                    <textarea class="uk-textarea monospace" id="action-config" rows="6">{}</textarea>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="action-position">Position</label>
+                    <input class="uk-input uk-form-width-small" type="number" id="action-position" value="0" min="0">
+                </div>
+            </form>
+        </div>
+        <div class="uk-modal-footer uk-text-right">
+            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary" type="button" onclick="createAction()">Add</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+async function createAction() {
+    let config;
+    try { config = JSON.parse(document.getElementById('action-config').value); }
+    catch(e) { alert('Invalid JSON'); return; }
+
+    const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}/actions`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            action_type: document.getElementById('action-type').value,
+            config,
+            position: parseInt(document.getElementById('action-position').value)
+        })
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+
+async function deleteAction(id) {
+    if (!confirm('Delete this action?')) return;
+    const res = await fetch(`/api/v1/actions/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+</script>
+{% endblock %}

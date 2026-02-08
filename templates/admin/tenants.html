@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Admin - Tenants{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
+            <h2 class="uk-margin-remove">Tenants</h2>
+            <button class="uk-button uk-button-primary uk-button-small"
+                    onclick="UIkit.modal('#new-tenant-dialog').show()">New Tenant</button>
+        </div>
+
+        <div class="uk-card uk-card-default">
+            <div class="uk-overflow-auto">
+                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Slug</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tenant in tenants %}
+                        <tr>
+                            <td>{{ tenant.name }}</td>
+                            <td><code>{{ tenant.slug }}</code></td>
+                            <td>{{ tenant.created_at.format("%Y-%m-%d") }}</td>
+                            <td>
+                                <button class="uk-button uk-button-default uk-button-small"
+                                        onclick="deleteTenant('{{ tenant.id }}','{{ tenant.name }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="new-tenant-dialog" uk-modal>
+    <div class="uk-modal-dialog">
+        <button class="uk-modal-close-default" type="button" uk-close></button>
+        <div class="uk-modal-header">
+            <h2 class="uk-modal-title">New Tenant</h2>
+        </div>
+        <div class="uk-modal-body">
+            <form class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="tenant-name">Name</label>
+                    <input class="uk-input" type="text" id="tenant-name" required>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="tenant-slug">Slug</label>
+                    <input class="uk-input" type="text" id="tenant-slug" required pattern="[a-z0-9\-]+">
+                </div>
+            </form>
+        </div>
+        <div class="uk-modal-footer uk-text-right">
+            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary" type="button" onclick="createTenant()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+document.getElementById('tenant-name').addEventListener('input', (e) => {
+    document.getElementById('tenant-slug').value = e.target.value
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+});
+
+async function createTenant() {
+    const res = await fetch('/api/v1/admin/tenants', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            name: document.getElementById('tenant-name').value,
+            slug: document.getElementById('tenant-slug').value
+        })
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+
+async function deleteTenant(id, name) {
+    if (!confirm(`Delete tenant "${name}" and ALL its data?`)) return;
+    const res = await fetch(`/api/v1/admin/tenants/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) { location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+</script>
+{% endblock %}

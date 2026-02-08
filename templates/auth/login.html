@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Login - Webhooker{% endblock %}
+{% block body %}
+<main class="auth-container">
+    <div class="uk-card uk-card-default">
+        <div class="uk-card-header uk-text-center">
+            <h2>Webhooker</h2>
+            <p class="uk-text-meta">Sign in to your account</p>
+        </div>
+        <div class="uk-card-body">
+            {% if let Some(err) = error %}
+            <div class="uk-alert uk-alert-danger" uk-alert>{{ err }}</div>
+            {% endif %}
+            <form id="login-form" class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="email">Email</label>
+                    <input class="uk-input" type="email" id="email" name="email" required autofocus>
+                </div>
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="password">Password</label>
+                    <input class="uk-input" type="password" id="password" name="password" required>
+                </div>
+                <button class="uk-button uk-button-primary uk-width-1-1" type="submit">Sign In</button>
+            </form>
+            <p class="uk-text-center uk-margin-top">
+                <a href="/auth/forgot-password">Forgot password?</a>
+            </p>
+        </div>
+    </div>
+</main>
+<script>
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            email: form.email.value,
+            password: form.password.value
+        })
+    });
+    const data = await res.json();
+    if (res.ok) {
+        document.cookie = `access_token=${data.access_token};path=/;max-age=900;SameSite=Lax`;
+        document.cookie = `refresh_token=${data.refresh_token};path=/;max-age=604800;SameSite=Lax`;
+        location.href = '/dashboard';
+    } else {
+        alert(data.error || 'Login failed');
+    }
+});
+</script>
+{% endblock %}

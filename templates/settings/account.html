@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Account Settings{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <h2>Account Settings</h2>
+
+        <div class="narrow-content">
+            <div class="uk-card uk-card-default uk-margin">
+                <div class="uk-card-header">
+                    <h3 class="uk-card-title">Profile</h3>
+                </div>
+                <div class="uk-card-body">
+                    <p><strong>Name:</strong> {{ user_name }}</p>
+                    <p><strong>Email:</strong> {{ user_email }}</p>
+                </div>
+            </div>
+
+            <div class="uk-card uk-card-default uk-margin">
+                <div class="uk-card-header">
+                    <h3 class="uk-card-title">Change Password</h3>
+                </div>
+                <div class="uk-card-body">
+                    <form id="password-form" class="uk-form-stacked">
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="current">Current Password</label>
+                            <input class="uk-input" type="password" id="current" required>
+                        </div>
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="newpw">New Password</label>
+                            <input class="uk-input" type="password" id="newpw" required minlength="8">
+                        </div>
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="confirm">Confirm Password</label>
+                            <input class="uk-input" type="password" id="confirm" required minlength="8">
+                        </div>
+                        <button class="uk-button uk-button-primary" type="submit">Change Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (e.target.newpw.value !== e.target.confirm.value) {
+        alert('Passwords do not match');
+        return;
+    }
+    alert('Password change requires re-authentication. Use the forgot password flow.');
+});
+</script>
+{% endblock %}
