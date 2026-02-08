@@ -1,11 +1,5 @@
 # Webhooker — Review TODO
 
-## 🔴 CRITICAL
-
-- [ ] **Email action module is a stub** — `src/actions/email.rs:89-95` — `load_tenant_smtp()` hardcoded to return Err. Module needs DB pool access to load tenant SMTP configs.
-- [ ] **Login rate limiter counts all attempts** — `src/rate_limit.rs:56-73` — Counter increments before password check. Only count failures.
-- [ ] **CORS headers missing on POST responses** — `src/routes/ingest.rs` — OPTIONS handler returns CORS but POST handler doesn't. Browser fetch() calls blocked.
-
 ## 🟠 HIGH
 
 - [ ] **No action queue — actions run synchronously** — No action_queue migration, no worker loop. Submissions block on external calls. Need Postgres-backed queue per DESIGN.md.
