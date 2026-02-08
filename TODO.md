@@ -15,7 +15,7 @@
 - [x] **Rate limit cleanup never called** — Periodic cleanup task every 5 min, evicts entries older than 30 min.
 - [x] **Cookie security flags missing** — Server-side HttpOnly/Secure/SameSite=Lax cookies, removed JS cookie handling.
 - [x] **System admin can delete own tenant** — Guard prevents deleting own tenant.
-- [ ] **Sort column injection fragile** — `src/db/submissions.rs:46-48` — Replace format!() SQL interpolation with enum.
+- [x] **Sort column injection fragile** — Replaced with `SortColumn`/`SortOrder` enums that map to static SQL strings.
 - [x] **Missing action_queue migration** — Added with async worker pool.
 
 ## 🔵 LOW

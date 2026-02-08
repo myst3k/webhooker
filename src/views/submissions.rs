@@ -65,8 +65,8 @@ pub async fn table_partial(
         endpoint_id,
         limit: per_page,
         offset,
-        sort_by: sort_by.clone(),
-        sort_order: sort_order.clone(),
+        sort_by: db::submissions::SortColumn::parse(&sort_by),
+        sort_order: db::submissions::SortOrder::parse(&sort_order),
         search: if search.is_empty() {
             None
         } else {

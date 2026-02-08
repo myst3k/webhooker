@@ -45,8 +45,8 @@ pub async fn list(
         endpoint_id,
         limit: per_page,
         offset,
-        sort_by: params.sort_by.unwrap_or_else(|| "created_at".to_string()),
-        sort_order: params.sort_order.unwrap_or_else(|| "desc".to_string()),
+        sort_by: db::submissions::SortColumn::parse(params.sort_by.as_deref().unwrap_or("created_at")),
+        sort_order: db::submissions::SortOrder::parse(params.sort_order.as_deref().unwrap_or("desc")),
         search: params.search.clone(),
     };
 

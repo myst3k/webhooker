@@ -48,29 +48,62 @@ pub async fn find_by_id_scoped(
     .await
 }
 
+pub enum SortColumn {
+    CreatedAt,
+    Id,
+}
+
+impl SortColumn {
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "id" => Self::Id,
+            _ => Self::CreatedAt,
+        }
+    }
+
+    fn as_sql(&self) -> &'static str {
+        match self {
+            Self::CreatedAt => "created_at",
+            Self::Id => "id",
+        }
+    }
+}
+
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
+
+impl SortOrder {
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "asc" => Self::Asc,
+            _ => Self::Desc,
+        }
+    }
+
+    fn as_sql(&self) -> &'static str {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
+        }
+    }
+}
+
 pub struct ListParams {
     pub endpoint_id: Uuid,
     pub limit: i64,
     pub offset: i64,
-    pub sort_by: String,
-    pub sort_order: String,
+    pub sort_by: SortColumn,
+    pub sort_order: SortOrder,
     pub search: Option<String>,
 }
 
 pub async fn list(pool: &PgPool, params: &ListParams) -> Result<Vec<Submission>, sqlx::Error> {
-    let order = if params.sort_order == "asc" {
-        "ASC"
-    } else {
-        "DESC"
-    };
+    let sort_col = params.sort_by.as_sql();
+    let order = params.sort_order.as_sql();
 
-    let sort_col = match params.sort_by.as_str() {
-        "created_at" => "created_at",
-        "id" => "id",
-        _ => "created_at",
-    };
-
-    let query = if let Some(search) = &params.search {
+    if let Some(search) = &params.search {
         let search_pattern = format!("%{search}%");
         sqlx::query_as::<_, Submission>(&format!(
             "SELECT * FROM submissions
@@ -94,9 +127,7 @@ pub async fn list(pool: &PgPool, params: &ListParams) -> Result<Vec<Submission>,
         .bind(params.offset)
         .fetch_all(pool)
         .await
-    };
-
-    query
+    }
 }
 
 pub async fn count(
