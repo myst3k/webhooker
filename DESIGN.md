@@ -420,6 +420,64 @@ POST   /api/v1/tenant/smtp/test     → send test email to verify config
 
 ---
 
+## Action Queue (Postgres-backed)
+
+Submissions return immediately after storing data. Actions execute asynchronously via a Postgres-backed queue.
+
+### Flow
+1. `POST /v1/e/{endpoint_id}` → parse, validate, store submission
+2. For each enabled action on the endpoint → `INSERT INTO action_queue (status='pending')`
+3. Return `201 Created` — submitter never waits on actions
+4. Background worker (Tokio task, same process) picks up pending items and executes
+
+### action_queue table
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuidv7 | PK |
+| submission_id | uuidv7 | FK → submissions |
+| action_id | uuidv7 | FK → actions |
+| status | varchar(20) | pending, processing, completed, failed |
+| attempts | int | default 0 |
+| max_attempts | int | default 3 |
+| last_error | text | nullable |
+| next_retry_at | timestamptz | for backoff scheduling |
+| created_at | timestamptz | |
+| completed_at | timestamptz | nullable |
+
+### Worker Loop
+```sql
+SELECT * FROM action_queue
+WHERE status = 'pending' AND next_retry_at <= now()
+ORDER BY created_at
+LIMIT 10
+FOR UPDATE SKIP LOCKED
+```
+
+`FOR UPDATE SKIP LOCKED` enables scaling to multiple workers later without double-processing.
+
+### Retry Strategy
+- Attempt 1 fails → retry after 30s
+- Attempt 2 fails → retry after 2min
+- Attempt 3 fails → mark as `failed`, log to `action_log`
+
+### On Completion
+- Success → status = `completed`, write to `action_log`, set `completed_at`
+- Final failure → status = `failed`, write to `action_log` with error details
+
+### Queue Cleanup
+Background task: delete `completed` entries older than 7 days. `failed` entries kept 30 days for debugging.
+
+### Dashboard Indicators
+Each endpoint shows queue health:
+```
+Submissions: 1,247
+Actions: ✅ 3,720 completed | ⏳ 2 pending | ❌ 5 failed
+```
+
+System admin gets global queue health: total pending, failure rate, oldest pending item.
+
+---
+
 ## Dashboard (Askama + HTMX + Pico CSS)
 
 Single binary serves both API and UI. No separate frontend build.
