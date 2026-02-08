@@ -78,6 +78,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
 
+    let cleanup_state = state.clone();
+    let mut cleanup_shutdown = shutdown_rx.clone();
+    tokio::spawn(async move {
+        let interval = std::time::Duration::from_secs(5 * 60);
+        let max_age = std::time::Duration::from_secs(30 * 60);
+        loop {
+            tokio::select! {
+                _ = tokio::time::sleep(interval) => {}
+                _ = cleanup_shutdown.changed() => break,
+            }
+            cleanup_state.submission_limiter.cleanup(max_age);
+            cleanup_state.login_limiter.cleanup(max_age);
+        }
+    });
+
     let worker_pool = webhooker::worker::run_pool(state, shutdown_rx, worker_count);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

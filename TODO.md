@@ -12,7 +12,7 @@
 - [ ] **Registration race condition** — `src/routes/auth.rs:60-62` — Two concurrent first-user registrations could both become system admin. Use DB lock or unique constraint.
 - [x] **Export query not tenant-scoped** — Added tenant_id join to list_for_export query.
 - [x] **Crypto key uses raw SHA-256** — Replaced with HKDF-SHA256 key derivation.
-- [ ] **Rate limit cleanup never called** — `src/rate_limit.rs` — DashMaps grow unbounded. Add periodic Tokio cleanup task.
+- [x] **Rate limit cleanup never called** — Periodic cleanup task every 5 min, evicts entries older than 30 min.
 - [ ] **Cookie security flags missing** — access_token cookie not set with HttpOnly/Secure/SameSite.
 - [ ] **System admin can delete own tenant** — `src/routes/admin.rs:63-74` — Add guard to prevent self-destruction.
 - [ ] **Sort column injection fragile** — `src/db/submissions.rs:46-48` — Replace format!() SQL interpolation with enum.
