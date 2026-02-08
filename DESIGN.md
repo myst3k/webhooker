@@ -6,7 +6,7 @@ Accepts POST data from anywhere: HTML forms, scripts, webhooks, IoT, whatever. D
 
 **Repo:** `myst3k/webhooker`
 **Stack:** Rust + Axum + Postgres 18 + Askama + HTMX + Pico CSS
-**License:** TBD (MIT or Apache 2.0)
+**License:** Dual MIT / Apache 2.0
 
 ---
 
@@ -55,6 +55,27 @@ System Admin (platform owner, first user)
 | owner | tenant | everything in their tenant + manage members |
 | member | tenant | CRUD on assigned projects, view submissions |
 
+### System Admin Can
+- Create / delete tenants
+- Create users and assign to any tenant
+- Disable / delete any user
+- Reset any user's password
+- View all tenants + users
+- Peek into any tenant's data for support
+
+### Tenant Owner Can
+- Add members to their tenant (creates new account)
+- Remove members from their tenant
+- Change member roles
+- Reset member passwords
+- Manage all projects/endpoints in their tenant
+
+### Members Can
+- CRUD on projects and endpoints within their tenant
+- View submissions
+- Configure actions on their endpoints
+- Cannot manage other users
+
 ---
 
 ## Authentication
@@ -81,11 +102,21 @@ System Admin (platform owner, first user)
 
 ### Auth Endpoints
 ```
-POST /api/v1/auth/register    → first user only (bootstrap), then disabled
-POST /api/v1/auth/login       → returns { access_token, refresh_token }
-POST /api/v1/auth/refresh     → rotates refresh token, returns new pair
-POST /api/v1/auth/logout      → deletes refresh token
+POST /api/v1/auth/register          → first user only (bootstrap), then disabled
+POST /api/v1/auth/login             → returns { access_token, refresh_token }
+POST /api/v1/auth/refresh           → rotates refresh token, returns new pair
+POST /api/v1/auth/logout            → deletes refresh token
+POST /api/v1/auth/forgot-password   → sends reset email (always returns 200)
+POST /api/v1/auth/reset-password    → validates token, updates password, nukes all refresh tokens
 ```
+
+### Password Reset Flow
+1. User submits email to `/forgot-password`
+2. System generates token, stores sha256 hash in DB with 1hr expiry
+3. Sends email via **system SMTP** with reset link
+4. Always returns 200 — never reveal whether email exists
+5. User clicks link, submits new password + token to `/reset-password`
+6. Token validated (expiry + single use), password updated, all refresh tokens revoked
 
 ### Brute Force Protection
 - Rate limit login attempts: 5 per email per 15 minutes
@@ -127,6 +158,31 @@ All primary keys use **Postgres 18 native `uuidv7()`** — time-ordered, sortabl
 | used | bool | default false (for reuse detection) |
 | expires_at | timestamptz | |
 | created_at | timestamptz | |
+
+### password_reset_tokens
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuidv7 | PK |
+| user_id | uuidv7 | FK → users |
+| token_hash | varchar(64) | sha256 |
+| used | bool | default false |
+| expires_at | timestamptz | 1 hour from creation |
+| created_at | timestamptz | |
+
+### tenant_smtp_configs
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuidv7 | PK |
+| tenant_id | uuidv7 | FK → tenants, unique |
+| host | varchar(255) | |
+| port | int | |
+| username_enc | bytea | AES-256-GCM encrypted |
+| password_enc | bytea | AES-256-GCM encrypted |
+| from_address | varchar(255) | |
+| from_name | varchar(255) | optional |
+| tls_mode | varchar(10) | starttls, tls, none |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### projects
 | Column | Type | Notes |
@@ -326,6 +382,44 @@ Actions support basic interpolation:
 
 ---
 
+## Email System
+
+Two completely separate email paths:
+
+### System Emails (Transactional)
+Configured once by system admin via environment variables. Used for:
+- Password reset links
+- Account creation notifications ("Welcome to Webhooker")
+- Member added to tenant notifications
+- Security alerts (optional)
+
+**Templates** — Askama, compiled into binary:
+- `welcome.html` — account created
+- `password_reset.html` — reset link (1hr expiry)
+- `member_added.html` — "You've been added to {{tenant.name}}"
+
+System SMTP config is env-var only. Not stored in DB, not accessible to tenants.
+
+### Action Emails (Per-Tenant SMTP)
+Each tenant configures their own SMTP credentials (stored encrypted in `tenant_smtp_configs`). When an endpoint's email action fires, it uses the **tenant's SMTP**, not the system SMTP.
+
+- Tenant owner configures SMTP in their settings page
+- Credentials encrypted at rest (AES-256-GCM, key from `WEBHOOKER_ENCRYPTION_KEY` env var)
+- If tenant has no SMTP configured → email actions fail with clear error in action log
+- **No fallback to system SMTP** — tenant submission notifications never go through the system admin's mail server
+
+This means each tenant controls their own sender address, deliverability, and reputation.
+
+### API for Tenant SMTP
+```
+GET    /api/v1/tenant/smtp          → current config (credentials masked)
+PUT    /api/v1/tenant/smtp          → set/update SMTP config
+DELETE /api/v1/tenant/smtp          → remove SMTP config
+POST   /api/v1/tenant/smtp/test     → send test email to verify config
+```
+
+---
+
 ## Dashboard (Askama + HTMX + Pico CSS)
 
 Single binary serves both API and UI. No separate frontend build.
@@ -348,6 +442,10 @@ Single binary serves both API and UI. No separate frontend build.
 | `/admin/tenants` | Tenant management (system admin) |
 | `/admin/users` | User management (system admin) |
 | `/settings` | Account settings, password change |
+| `/settings/smtp` | Tenant SMTP configuration |
+| `/settings/members` | Tenant member management (owner) |
+| `/auth/forgot-password` | Password reset request |
+| `/auth/reset-password` | Password reset form |
 
 ### Submission Table Features
 - Columns from defined fields + auto-discovered keys
@@ -440,8 +538,18 @@ DELETE /api/v1/admin/users/{id}          → delete user
 GET    /api/v1/tenant                    → current tenant info
 PUT    /api/v1/tenant                    → update tenant
 GET    /api/v1/tenant/members            → list members
-POST   /api/v1/tenant/members            → add member
+POST   /api/v1/tenant/members            → add member (creates account)
+PUT    /api/v1/tenant/members/{id}       → update member role
 DELETE /api/v1/tenant/members/{id}       → remove member
+POST   /api/v1/tenant/members/{id}/reset-password → reset member's password
+```
+
+### Tenant SMTP (owner scope)
+```
+GET    /api/v1/tenant/smtp              → current config (credentials masked)
+PUT    /api/v1/tenant/smtp              → set/update SMTP config
+DELETE /api/v1/tenant/smtp              → remove SMTP config
+POST   /api/v1/tenant/smtp/test         → send test email to verify config
 ```
 
 ---
@@ -465,11 +573,12 @@ DELETE /api/v1/tenant/members/{id}       → remove member
 - Same error for wrong email vs wrong password
 
 ### Infrastructure
-- Secrets via environment variables (JWT key, SMTP creds)
+- System secrets via environment variables (JWT key, system SMTP creds, encryption key)
+- Tenant SMTP credentials encrypted at rest (AES-256-GCM)
 - Audit log for all mutations
 - Optional data retention policy per endpoint (auto-purge)
 - Trusted proxy configuration for accurate IP capture
-- Single `pg_dump` backs up everything
+- Single `pg_dump` backs up everything (tenant SMTP creds remain encrypted in dump)
 
 ---
 
@@ -479,17 +588,21 @@ DELETE /api/v1/tenant/members/{id}       → remove member
 # Required
 DATABASE_URL=postgres://user:pass@host:5432/webhooker
 JWT_SECRET=your-secret-key
+WEBHOOKER_ENCRYPTION_KEY=your-256-bit-key  # AES-256-GCM for tenant SMTP creds
 
-# SMTP (for email action module)
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=you@example.com
-SMTP_PASS=app-password
-SMTP_FROM=notifications@example.com
+# System SMTP (transactional emails — password resets, account notifications)
+WEBHOOKER_SMTP_HOST=smtp.example.com
+WEBHOOKER_SMTP_PORT=587
+WEBHOOKER_SMTP_USER=system@example.com
+WEBHOOKER_SMTP_PASS=app-password
+WEBHOOKER_SMTP_FROM=noreply@example.com
+
+# NOTE: Tenant/action SMTP is configured per-tenant in the DB, NOT here.
 
 # Optional
 WEBHOOKER_HOST=0.0.0.0
 WEBHOOKER_PORT=3000
+WEBHOOKER_BASE_URL=https://webhooker.example.com  # for password reset links
 WEBHOOKER_REGISTRATION=closed          # closed | open
 WEBHOOKER_MAX_BODY_SIZE=1048576        # bytes (1MB)
 WEBHOOKER_TRUSTED_PROXIES=10.0.0.0/8   # for X-Forwarded-For
