@@ -3,18 +3,21 @@ use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use serde_json::json;
+use sqlx::PgPool;
 
 use super::context::ActionContext;
 use super::template;
 use super::{ActionError, ActionModule, ActionResult, ActionStatus};
+use crate::{crypto, db};
 
 pub struct EmailModule {
+    pool: PgPool,
     encryption_key: String,
 }
 
 impl EmailModule {
-    pub fn new(encryption_key: String) -> Self {
-        Self { encryption_key }
+    pub fn new(pool: PgPool, encryption_key: String) -> Self {
+        Self { pool, encryption_key }
     }
 }
 
@@ -57,8 +60,7 @@ impl ActionModule for EmailModule {
         ctx: &ActionContext,
         config: &serde_json::Value,
     ) -> Result<ActionResult, ActionError> {
-        // Load tenant SMTP config from context - the pipeline will have loaded it
-        let smtp_config = load_tenant_smtp(ctx.tenant.id, &self.encryption_key)
+        let smtp_config = load_tenant_smtp(&self.pool, ctx.tenant.id, &self.encryption_key)
             .await
             .map_err(|e| ActionError::from(format!("Failed to load tenant SMTP: {e}")))?;
 
@@ -125,15 +127,28 @@ pub struct TenantSmtp {
     pub tls_mode: String,
 }
 
-/// Load and decrypt tenant SMTP config. This is a placeholder that will be called
-/// with the DB pool in the actual pipeline.
 async fn load_tenant_smtp(
-    _tenant_id: uuid::Uuid,
-    _encryption_key: &str,
+    pool: &PgPool,
+    tenant_id: uuid::Uuid,
+    encryption_key: &str,
 ) -> Result<TenantSmtp, String> {
-    // This will be properly implemented when the pipeline wires everything together.
-    // The pipeline should pass the decrypted SMTP config through ActionContext or similar.
-    Err("Tenant SMTP not configured. Please configure SMTP in tenant settings.".to_string())
+    let config = db::tenant_smtp::find_by_tenant(pool, tenant_id)
+        .await
+        .map_err(|e| format!("DB error: {e}"))?
+        .ok_or("Tenant SMTP not configured. Please configure SMTP in tenant settings.")?;
+
+    let username = crypto::decrypt(&config.username_enc, encryption_key)?;
+    let password = crypto::decrypt(&config.password_enc, encryption_key)?;
+
+    Ok(TenantSmtp {
+        host: config.host,
+        port: config.port as u16,
+        username,
+        password,
+        from_address: config.from_address,
+        from_name: config.from_name,
+        tls_mode: config.tls_mode,
+    })
 }
 
 pub fn build_smtp_transport(

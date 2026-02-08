@@ -1,10 +1,13 @@
 use std::net::SocketAddr;
 
+use rand::Rng;
 use sqlx::postgres::PgPoolOptions;
 use tokio::signal;
 use tracing_subscriber::EnvFilter;
 
+use webhooker::auth::password;
 use webhooker::config::Config;
+use webhooker::db;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,6 +40,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Failed to run migrations");
 
     tracing::info!("Migrations applied");
+
+    // Seed admin user if no users exist
+    let user_count = db::users::count_all(&pool)
+        .await
+        .expect("Failed to count users");
+
+    if user_count == 0 {
+        let admin_password: String = rand::rng()
+            .sample_iter(&rand::distr::Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+
+        let pw_hash = password::hash(&admin_password).expect("Failed to hash password");
+
+        let tenant = db::tenants::create(&pool, "Default", "default")
+            .await
+            .expect("Failed to create default tenant");
+
+        db::users::create(
+            &pool,
+            tenant.id,
+            "admin@localhost",
+            &pw_hash,
+            "Admin",
+            "owner",
+            true,
+        )
+        .await
+        .expect("Failed to create admin user");
+
+        tracing::info!("========================================");
+        tracing::info!("  Admin account created!");
+        tracing::info!("  Email:    admin@localhost");
+        tracing::info!("  Password: {admin_password}");
+        tracing::info!("  Change this password after first login.");
+        tracing::info!("========================================");
+    }
 
     let addr = SocketAddr::new(config.host, config.port);
     let app = webhooker::build_app(pool, config);

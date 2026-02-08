@@ -57,11 +57,47 @@
 <script>
 document.getElementById('password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (e.target.newpw.value !== e.target.confirm.value) {
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+
+    if (form.newpw.value !== form.confirm.value) {
         alert('Passwords do not match');
         return;
     }
-    alert('Password change requires re-authentication. Use the forgot password flow.');
+
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+
+    try {
+        const res = await fetch('/api/v1/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                current_password: form.current.value,
+                new_password: form.newpw.value,
+            }),
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to change password');
+        }
+
+        const data = await res.json();
+
+        // Set new cookies
+        document.cookie = `access_token=${data.access_token};path=/;SameSite=Lax`;
+        document.cookie = `refresh_token=${data.refresh_token};path=/;SameSite=Lax`;
+
+        form.reset();
+        alert('Password changed successfully.');
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+    }
 });
 </script>
 {% endblock %}

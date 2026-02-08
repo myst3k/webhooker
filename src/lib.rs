@@ -35,7 +35,7 @@ pub fn build_app(pool: PgPool, config: Config) -> Router {
     // Build module registry
     let mut modules = ModuleRegistry::new();
     modules.register(Arc::new(WebhookModule::new()));
-    modules.register(Arc::new(EmailModule::new(config.encryption_key.clone())));
+    modules.register(Arc::new(EmailModule::new(pool.clone(), config.encryption_key.clone())));
 
     // Build system mailer
     let system_mailer = config.smtp.as_ref().and_then(|smtp| {

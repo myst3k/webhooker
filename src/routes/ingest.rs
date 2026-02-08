@@ -12,6 +12,33 @@ use crate::db;
 use crate::state::SharedState;
 use crate::submission::{parser, pipeline};
 
+/// Extract the CORS allowed origin from endpoint settings, defaulting to "*".
+fn get_cors_origin(settings: &Option<serde_json::Value>) -> String {
+    settings
+        .as_ref()
+        .and_then(|s| {
+            s.get("cors_origins")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+        })
+        .unwrap_or_else(|| "*".to_string())
+}
+
+/// Wrap a response with CORS headers.
+fn with_cors(response: Response, origin: &str) -> Response {
+    let mut response = response;
+    let headers = response.headers_mut();
+    headers.insert("Access-Control-Allow-Origin", origin.parse().unwrap_or_else(|_| "*".parse().unwrap()));
+    headers.insert("Access-Control-Allow-Methods", "POST, OPTIONS".parse().unwrap());
+    headers.insert("Access-Control-Allow-Headers", "Content-Type".parse().unwrap());
+    response
+}
+
 pub async fn ingest(
     State(state): State<SharedState>,
     Path(endpoint_id): Path<Uuid>,
@@ -28,6 +55,8 @@ pub async fn ingest(
             (StatusCode::NOT_FOUND, Json(json!({"error": "Endpoint not found"}))).into_response()
         })?;
 
+    let cors_origin = get_cors_origin(&endpoint.settings);
+
     // Parse body
     let content_type = headers
         .get("content-type")
@@ -37,11 +66,17 @@ pub async fn ingest(
         parser::parse_multipart(&headers, body)
             .await
             .map_err(|e| {
-                (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response()
+                with_cors(
+                    (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
+                    &cors_origin,
+                )
             })?
     } else {
         parser::parse_body(content_type, &body).map_err(|e| {
-            (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response()
+            with_cors(
+                (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response(),
+                &cors_origin,
+            )
         })?
     };
 
@@ -50,33 +85,43 @@ pub async fn ingest(
     let result = pipeline::run(&state, &endpoint, &headers, peer_ip, raw_data)
         .await
         .map_err(|e| {
-            if e.contains("Rate limited") {
-                (StatusCode::TOO_MANY_REQUESTS, Json(json!({"error": e}))).into_response()
+            let status = if e.contains("Rate limited") {
+                StatusCode::TOO_MANY_REQUESTS
             } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response()
-            }
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            with_cors(
+                (status, Json(json!({"error": e}))).into_response(),
+                &cors_origin,
+            )
         })?;
 
     // If redirect configured and it's a form submission, redirect
     if let Some(ref url) = result.redirect_url {
         if content_type.is_some_and(|ct| ct.contains("form")) {
-            return Ok(Redirect::to(url).into_response());
+            return Ok(with_cors(Redirect::to(url).into_response(), &cors_origin));
         }
     }
 
     if result.spam {
         // Silent 200 for spam
-        return Ok((StatusCode::OK, Json(json!({"status": "ok"}))).into_response());
+        return Ok(with_cors(
+            (StatusCode::OK, Json(json!({"status": "ok"}))).into_response(),
+            &cors_origin,
+        ));
     }
 
-    Ok((
-        StatusCode::CREATED,
-        Json(json!({
-            "status": "created",
-            "submission_id": result.submission_id,
-        })),
-    )
-        .into_response())
+    Ok(with_cors(
+        (
+            StatusCode::CREATED,
+            Json(json!({
+                "status": "created",
+                "submission_id": result.submission_id,
+            })),
+        )
+            .into_response(),
+        &cors_origin,
+    ))
 }
 
 pub async fn ingest_options(
@@ -88,17 +133,7 @@ pub async fn ingest_options(
     let allowed_origins = endpoint
         .ok()
         .flatten()
-        .and_then(|e| e.settings)
-        .and_then(|s| {
-            s.get("cors_origins")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                })
-        })
+        .map(|e| get_cors_origin(&e.settings))
         .unwrap_or_else(|| "*".to_string());
 
     (

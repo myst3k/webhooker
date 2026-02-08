@@ -5,6 +5,7 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::auth::extractor::AuthUser;
 use crate::auth::jwt::{Claims, encode_token};
 use crate::auth::password;
 use crate::db;
@@ -162,6 +163,7 @@ pub async fn login(
         .map_err(|e| AppError::Internal(e))?;
 
     if !valid {
+        state.login_limiter.record_failure(&req.email);
         return Err(AppError::Unauthorized("Invalid credentials".to_string()));
     }
 
@@ -345,6 +347,79 @@ pub async fn reset_password(
 
     Ok(Json(MessageResponse {
         message: "Password reset successfully".to_string(),
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+pub async fn change_password(
+    State(state): State<SharedState>,
+    auth: AuthUser,
+    Json(req): Json<ChangePasswordRequest>,
+) -> Result<Json<AuthResponse>, AppError> {
+    if req.new_password.len() < 8 {
+        return Err(AppError::BadRequest(
+            "Password must be at least 8 characters".to_string(),
+        ));
+    }
+
+    let user = db::users::find_by_id(&state.pool, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
+
+    let valid = password::verify(&req.current_password, &user.password_hash)
+        .map_err(|e| AppError::Internal(e))?;
+
+    if !valid {
+        return Err(AppError::Unauthorized(
+            "Current password is incorrect".to_string(),
+        ));
+    }
+
+    let pw_hash = password::hash(&req.new_password).map_err(|e| AppError::Internal(e))?;
+    db::users::update_password(&state.pool, user.id, &pw_hash).await?;
+
+    // Nuke all existing refresh tokens
+    db::refresh_tokens::delete_all_for_user(&state.pool, user.id).await?;
+
+    // Issue fresh tokens
+    let claims = Claims::new(
+        user.id,
+        user.tenant_id,
+        user.role.clone(),
+        user.is_system_admin,
+    );
+    let access_token = encode_token(&claims, &state.config.jwt_secret)
+        .map_err(|e| AppError::Internal(e))?;
+
+    let refresh = generate_refresh_token();
+    let refresh_hash = hash_token(&refresh);
+    db::refresh_tokens::create(
+        &state.pool,
+        user.id,
+        &refresh_hash,
+        Utc::now() + Duration::days(7),
+    )
+    .await?;
+
+    audit::log_event(
+        &state.pool,
+        user.tenant_id,
+        Some(user.id),
+        "user.password_changed",
+        "user",
+        Some(user.id),
+        None,
+    )
+    .await;
+
+    Ok(Json(AuthResponse {
+        access_token,
+        refresh_token: refresh,
     }))
 }
 

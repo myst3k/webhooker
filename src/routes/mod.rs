@@ -22,6 +22,7 @@ pub fn api_routes() -> Router<SharedState> {
         .route("/api/v1/auth/logout", post(auth::logout))
         .route("/api/v1/auth/forgot-password", post(auth::forgot_password))
         .route("/api/v1/auth/reset-password", post(auth::reset_password))
+        .route("/api/v1/auth/change-password", post(auth::change_password))
         // Projects
         .route("/api/v1/projects", get(projects::list).post(projects::create))
         .route(

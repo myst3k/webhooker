@@ -61,8 +61,33 @@ impl LoginRateLimiter {
         }
     }
 
-    /// Check if login attempt is allowed. 5 attempts per 15 minutes.
+    /// Check if login attempt is allowed. 5 failures per 15 minutes.
+    /// Does NOT increment the counter — call `record_failure()` on invalid password.
     pub fn check(&self, email: &str) -> Result<(), u64> {
+        let window = Duration::from_secs(15 * 60);
+        let now = Instant::now();
+
+        let entry = self.entries.get(&email.to_lowercase());
+        let Some(entry) = entry else {
+            return Ok(());
+        };
+
+        let (count, start) = entry.value();
+
+        if now.duration_since(*start) > window {
+            return Ok(());
+        }
+
+        if *count >= 5 {
+            let elapsed = now.duration_since(*start).as_secs();
+            return Err((15 * 60u64).saturating_sub(elapsed));
+        }
+
+        Ok(())
+    }
+
+    /// Record a failed login attempt. Increments the counter for the given email.
+    pub fn record_failure(&self, email: &str) {
         let window = Duration::from_secs(15 * 60);
         let now = Instant::now();
 
@@ -72,23 +97,9 @@ impl LoginRateLimiter {
         if now.duration_since(*start) > window {
             *count = 1;
             *start = now;
-            return Ok(());
+        } else {
+            *count += 1;
         }
-
-        if *count >= 5 {
-            let elapsed = now.duration_since(*start).as_secs();
-            return Err((15 * 60u64).saturating_sub(elapsed));
-        }
-
-        *count += 1;
-        Ok(())
-    }
-
-    /// Record a failed attempt without checking (call after check passes but login fails).
-    pub fn record_failure(&self, email: &str) {
-        // The check already incremented, so nothing extra needed.
-        // This method exists for clarity at call sites.
-        let _ = email;
     }
 
     pub fn cleanup(&self, max_age: Duration) {
