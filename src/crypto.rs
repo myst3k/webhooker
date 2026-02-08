@@ -1,12 +1,17 @@
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, AeadCore, Nonce};
-use sha2::{Digest, Sha256};
+use hkdf::Hkdf;
+use sha2::Sha256;
 
-/// Derive a 256-bit key from the encryption key string.
+const HKDF_SALT: &[u8] = b"webhooker-v1";
+const HKDF_INFO: &[u8] = b"aes256gcm-key";
+
 fn derive_key(key: &str) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    hasher.update(key.as_bytes());
-    hasher.finalize().into()
+    let hk = Hkdf::<Sha256>::new(Some(HKDF_SALT), key.as_bytes());
+    let mut okm = [0u8; 32];
+    hk.expand(HKDF_INFO, &mut okm)
+        .expect("32 bytes is a valid HKDF-SHA256 output length");
+    okm
 }
 
 /// Encrypt plaintext using AES-256-GCM. Returns nonce (12 bytes) prepended to ciphertext.
