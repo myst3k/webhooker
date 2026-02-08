@@ -13,13 +13,13 @@ use crate::state::SharedState;
 #[derive(Deserialize)]
 pub struct CreateProject {
     pub name: String,
-    pub slug: String,
+    pub slug: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct UpdateProject {
     pub name: String,
-    pub slug: String,
+    pub slug: Option<String>,
 }
 
 pub async fn list(
@@ -35,9 +35,10 @@ pub async fn create(
     State(state): State<SharedState>,
     Json(req): Json<CreateProject>,
 ) -> Result<Json<Project>, AppError> {
-    validate_slug(&req.slug)?;
+    let slug = req.slug.unwrap_or_else(|| slugify(&req.name));
+    validate_slug(&slug)?;
 
-    let project = db::projects::create(&state.pool, auth.tenant_id(), &req.name, &req.slug)
+    let project = db::projects::create(&state.pool, auth.tenant_id(), &req.name, &slug)
         .await
         .map_err(|e| match e {
             sqlx::Error::Database(ref db_err) if db_err.is_unique_violation() => {
@@ -77,9 +78,10 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateProject>,
 ) -> Result<Json<Project>, AppError> {
-    validate_slug(&req.slug)?;
+    let slug = req.slug.unwrap_or_else(|| slugify(&req.name));
+    validate_slug(&slug)?;
 
-    let project = db::projects::update(&state.pool, id, auth.tenant_id(), &req.name, &req.slug)
+    let project = db::projects::update(&state.pool, id, auth.tenant_id(), &req.name, &slug)
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => AppError::NotFound("Project not found".to_string()),
@@ -122,6 +124,17 @@ pub async fn delete(
     .await;
 
     Ok(Json(serde_json::json!({ "message": "Deleted" })))
+}
+
+fn slugify(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn validate_slug(slug: &str) -> Result<(), AppError> {

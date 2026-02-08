@@ -1,6 +1,7 @@
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::response::{Html, IntoResponse};
+use uuid::Uuid;
 
 use crate::auth::extractor::AuthUser;
 use crate::db;
@@ -35,6 +36,16 @@ struct EndpointSettingsTemplate {
     store_metadata: bool,
     redirect_url: String,
     retention_days: String,
+}
+
+#[derive(Template)]
+#[template(path = "dashboard/endpoint_fields.html")]
+#[allow(dead_code)]
+struct EndpointFieldsTemplate {
+    user_name: String,
+    is_system_admin: bool,
+    endpoint: Endpoint,
+    endpoint_id: String,
     field_defs: Vec<FieldDef>,
 }
 
@@ -73,15 +84,37 @@ struct FieldDef {
     name: String,
     field_type: String,
     required: bool,
-    label: String,
+}
+
+fn parse_field_defs(endpoint: &Endpoint) -> Vec<FieldDef> {
+    endpoint
+        .fields
+        .as_ref()
+        .and_then(|f| f.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|f| {
+                    Some(FieldDef {
+                        name: f.get("name")?.as_str()?.to_string(),
+                        field_type: f
+                            .get("type")
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("text")
+                            .to_string(),
+                        required: f.get("required").and_then(|r| r.as_bool()).unwrap_or(false),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 pub async fn submissions_page(
     auth: AuthUser,
     State(state): State<SharedState>,
-    Path(slug): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let endpoint = db::endpoints::find_by_slug_scoped(&state.pool, &slug, auth.tenant_id())
+    let endpoint = db::endpoints::find_by_id_scoped(&state.pool, id, auth.tenant_id())
         .await?
         .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
 
@@ -108,9 +141,9 @@ pub async fn submissions_page(
 pub async fn settings_page(
     auth: AuthUser,
     State(state): State<SharedState>,
-    Path(slug): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let endpoint = db::endpoints::find_by_slug_scoped(&state.pool, &slug, auth.tenant_id())
+    let endpoint = db::endpoints::find_by_id_scoped(&state.pool, id, auth.tenant_id())
         .await?
         .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
 
@@ -159,32 +192,6 @@ pub async fn settings_page(
         .map(|d| d.to_string())
         .unwrap_or_default();
 
-    let field_defs: Vec<FieldDef> = endpoint
-        .fields
-        .as_ref()
-        .and_then(|f| f.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|f| {
-                    Some(FieldDef {
-                        name: f.get("name")?.as_str()?.to_string(),
-                        field_type: f
-                            .get("type")
-                            .and_then(|t| t.as_str())
-                            .unwrap_or("text")
-                            .to_string(),
-                        required: f.get("required").and_then(|r| r.as_bool()).unwrap_or(false),
-                        label: f
-                            .get("label")
-                            .and_then(|l| l.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-
     let template = EndpointSettingsTemplate {
         user_name: user,
         is_system_admin: auth.is_system_admin,
@@ -197,6 +204,31 @@ pub async fn settings_page(
         store_metadata,
         redirect_url,
         retention_days,
+    };
+    Ok(Html(template.render().unwrap_or_default()))
+}
+
+pub async fn fields_page(
+    auth: AuthUser,
+    State(state): State<SharedState>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let endpoint = db::endpoints::find_by_id_scoped(&state.pool, id, auth.tenant_id())
+        .await?
+        .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
+
+    let user = db::users::find_by_id(&state.pool, auth.user_id)
+        .await?
+        .map(|u| u.name)
+        .unwrap_or_default();
+
+    let field_defs = parse_field_defs(&endpoint);
+
+    let template = EndpointFieldsTemplate {
+        user_name: user,
+        is_system_admin: auth.is_system_admin,
+        endpoint_id: endpoint.id.to_string(),
+        endpoint,
         field_defs,
     };
     Ok(Html(template.render().unwrap_or_default()))
@@ -205,9 +237,9 @@ pub async fn settings_page(
 pub async fn actions_page(
     auth: AuthUser,
     State(state): State<SharedState>,
-    Path(slug): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let endpoint = db::endpoints::find_by_slug_scoped(&state.pool, &slug, auth.tenant_id())
+    let endpoint = db::endpoints::find_by_id_scoped(&state.pool, id, auth.tenant_id())
         .await?
         .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
 
@@ -242,9 +274,9 @@ pub async fn actions_page(
 pub async fn snippet_page(
     auth: AuthUser,
     State(state): State<SharedState>,
-    Path(slug): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let endpoint = db::endpoints::find_by_slug_scoped(&state.pool, &slug, auth.tenant_id())
+    let endpoint = db::endpoints::find_by_id_scoped(&state.pool, id, auth.tenant_id())
         .await?
         .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
 
@@ -253,31 +285,7 @@ pub async fn snippet_page(
         .map(|u| u.name)
         .unwrap_or_default();
 
-    let fields: Vec<FieldDef> = endpoint
-        .fields
-        .as_ref()
-        .and_then(|f| f.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|f| {
-                    Some(FieldDef {
-                        name: f.get("name")?.as_str()?.to_string(),
-                        field_type: f
-                            .get("type")
-                            .and_then(|t| t.as_str())
-                            .unwrap_or("text")
-                            .to_string(),
-                        required: f.get("required").and_then(|r| r.as_bool()).unwrap_or(false),
-                        label: f
-                            .get("label")
-                            .and_then(|l| l.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let fields = parse_field_defs(&endpoint);
 
     let template = SnippetTemplate {
         user_name: user,

@@ -4,54 +4,76 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <ul class="uk-breadcrumb">
+        <ul class="breadcrumb">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/endpoints/{{ endpoint.slug }}">{{ endpoint.name }}</a></li>
-            <li><span>Integration</span></li>
+            <li><a href="/endpoints/{{ endpoint_id }}">{{ endpoint.name }}</a></li>
+            <li><span class="current">Integration</span></li>
         </ul>
 
-        <h2>Integration Snippets</h2>
-        <p>Endpoint URL: <code>{{ base_url }}/v1/e/{{ endpoint_id }}</code></p>
+        <div class="page-header">
+            <div>
+                <h2>Integration Snippets</h2>
+                <p class="text-sm text-neutral-400 mt-1">
+                    Endpoint: <code class="text-xs">{{ base_url }}/v1/e/{{ endpoint_id }}</code>
+                </p>
+            </div>
+        </div>
 
-        <div class="narrow-content">
-            <div class="uk-card uk-card-default uk-card-body uk-margin">
-                <h3 class="uk-card-title">HTML Form</h3>
-                <pre><code>&lt;form action="{{ base_url }}/v1/e/{{ endpoint_id }}" method="POST"&gt;
-{% for field in fields %}  &lt;label&gt;{{ field.label }}
-    &lt;input type="{% if field.field_type == "email" %}email{% else if field.field_type == "textarea" %}text{% else %}{{ field.field_type }}{% endif %}" name="{{ field.name }}"{% if field.required %} required{% endif %}&gt;
+        <div class="narrow-content space-y-5">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="file-code" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:6px;color:#94a3b8;"></i>HTML Form</h3>
+                </div>
+                <div class="card-body pt-0 pb-4 px-4">
+                    <pre class="text-sm"><code>&lt;form action="{{ base_url }}/v1/e/{{ endpoint_id }}" method="POST"&gt;
+{% for field in fields %}  &lt;label&gt;{{ field.name }}
+    &lt;input type="{{ field.field_type }}" name="{{ field.name }}"{% if field.required %} required{% endif %}&gt;
   &lt;/label&gt;
 {% endfor %}  &lt;button type="submit"&gt;Submit&lt;/button&gt;
 &lt;/form&gt;</code></pre>
+                </div>
             </div>
 
-            <div class="uk-card uk-card-default uk-card-body uk-margin">
-                <h3 class="uk-card-title">JavaScript (fetch)</h3>
-                <pre><code>fetch('{{ base_url }}/v1/e/{{ endpoint_id }}', {
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="braces" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:6px;color:#94a3b8;"></i>JavaScript (fetch)</h3>
+                </div>
+                <div class="card-body pt-0 pb-4 px-4">
+                    <pre class="text-sm"><code>fetch('{{ base_url }}/v1/e/{{ endpoint_id }}', {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({
 {% for field in fields %}    {{ field.name }}: 'value'{% if !loop.last %},{% endif %}
 {% endfor %}  })
 });</code></pre>
+                </div>
             </div>
 
-            <div class="uk-card uk-card-default uk-card-body uk-margin">
-                <h3 class="uk-card-title">curl</h3>
-                <pre><code>curl -X POST {{ base_url }}/v1/e/{{ endpoint_id }} \
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="terminal" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:6px;color:#94a3b8;"></i>curl</h3>
+                </div>
+                <div class="card-body pt-0 pb-4 px-4">
+                    <pre class="text-sm"><code>curl -X POST {{ base_url }}/v1/e/{{ endpoint_id }} \
   -H 'Content-Type: application/json' \
   -d '{
 {% for field in fields %}    "{{ field.name }}": "value"{% if !loop.last %},{% endif %}
 {% endfor %}  }'</code></pre>
+                </div>
             </div>
 
-            <div class="uk-card uk-card-default uk-card-body uk-margin">
-                <h3 class="uk-card-title">Python</h3>
-                <pre><code>import requests
+            <div class="card">
+                <div class="card-header">
+                    <h3><i data-lucide="code" style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:6px;color:#94a3b8;"></i>Python</h3>
+                </div>
+                <div class="card-body pt-0 pb-4 px-4">
+                    <pre class="text-sm"><code>import requests
 
 requests.post('{{ base_url }}/v1/e/{{ endpoint_id }}', json={
 {% for field in fields %}    '{{ field.name }}': 'value',
 {% endfor %}})
 </code></pre>
+                </div>
             </div>
         </div>
     </main>

@@ -4,48 +4,52 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <ul class="uk-breadcrumb">
+        <ul class="breadcrumb">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/endpoints/{{ endpoint.slug }}">{{ endpoint.name }}</a></li>
-            <li><span>Actions</span></li>
+            <li><a href="/endpoints/{{ endpoint_id }}">{{ endpoint.name }}</a></li>
+            <li><span class="current">Actions</span></li>
         </ul>
 
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">Action Pipeline</h2>
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#new-action-dialog').show()">Add Action</button>
+        <div class="page-header">
+            <div>
+                <h2>Action Pipeline</h2>
+                <p class="text-sm text-neutral-400 mt-1">Actions execute in order after each submission. Failures don't stop the pipeline.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('new-action-dialog')">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Action
+            </button>
         </div>
-
-        <p class="uk-text-meta">Actions execute in order after each submission. Failures don't stop the pipeline.</p>
 
         {% if actions.is_empty() %}
         <div class="empty-state">
-            <p><span uk-icon="icon: cog; ratio: 2" class="uk-text-muted"></span></p>
-            <p>No actions configured. Add one to start processing submissions.</p>
+            <div class="empty-icon"><i data-lucide="workflow" style="width:24px;height:24px;color:#94a3b8;"></i></div>
+            <p class="text-base font-medium text-neutral-500">No actions configured</p>
+            <p class="text-sm">Add one to start processing submissions.</p>
         </div>
         {% else %}
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th class="w-12">#</th>
                             <th>Type</th>
-                            <th>Enabled</th>
+                            <th>Status</th>
                             <th>Config</th>
-                            <th></th>
+                            <th class="w-16"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for action in actions %}
                         <tr>
-                            <td>{{ action.position }}</td>
-                            <td><strong>{{ action.action_type }}</strong></td>
-                            <td>{% if action.enabled %}<span class="uk-label uk-label-success">Yes</span>{% else %}<span class="uk-label uk-label-danger">No</span>{% endif %}</td>
-                            <td><code class="uk-text-small" style="word-break:break-all;">{{ action.config }}</code></td>
+                            <td class="text-neutral-400 font-mono text-sm">{{ action.position }}</td>
+                            <td><span class="font-semibold text-neutral-700">{{ action.action_type }}</span></td>
+                            <td>{% if action.enabled %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-danger">Disabled</span>{% endif %}</td>
+                            <td><code class="text-xs" style="word-break:break-all;">{{ action.config }}</code></td>
                             <td>
-                                <button class="uk-button uk-button-default uk-button-small"
-                                        onclick="deleteAction('{{ action.id }}')">Delete</button>
+                                <button class="btn btn-ghost btn-sm" onclick="deleteAction('{{ action.id }}')" title="Delete action">
+                                    <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -57,35 +61,32 @@
     </main>
 </div>
 
-<div id="new-action-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">Add Action</h2>
+<div id="new-action-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>Add Action</h2>
         </div>
-        <div class="uk-modal-body">
-            <form id="new-action-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="action-type">Type</label>
-                    <select class="uk-select" id="action-type">
-                        {% for module in available_modules %}
-                        <option value="{{ module.id }}">{{ module.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="action-config">Config (JSON)</label>
-                    <textarea class="uk-textarea monospace" id="action-config" rows="6">{}</textarea>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="action-position">Position</label>
-                    <input class="uk-input uk-form-width-small" type="number" id="action-position" value="0" min="0">
-                </div>
-            </form>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label" for="action-type">Type</label>
+                <select class="form-input" id="action-type">
+                    {% for module in available_modules %}
+                    <option value="{{ module.id }}">{{ module.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="action-config">Config (JSON)</label>
+                <textarea class="form-input monospace" id="action-config" rows="6">{}</textarea>
+            </div>
+            <div>
+                <label class="form-label" for="action-position">Position</label>
+                <input class="form-input w-24" type="number" id="action-position" value="0" min="0">
+            </div>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="createAction()">Add</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="createAction()">Add Action</button>
         </div>
     </div>
 </div>

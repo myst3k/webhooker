@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ endpoint.name }} - Fields{% endblock %}
+{% block body %}
+<div class="app-shell">
+    {% include "sidebar.html" %}
+    <main class="app-content">
+        <ul class="breadcrumb">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/endpoints/{{ endpoint_id }}">{{ endpoint.name }}</a></li>
+            <li><span class="current">Fields</span></li>
+        </ul>
+
+        <div class="page-header">
+            <div>
+                <h2>Fields</h2>
+                <p class="text-sm text-neutral-400 mt-1">Define expected form fields. Submissions are still accepted for undefined fields.</p>
+            </div>
+        </div>
+
+        <div class="narrow-content">
+            <div class="card">
+                <div class="overflow-x-auto">
+                    <table class="data-table" id="fields-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="fields-body">
+                            {% for f in field_defs %}
+                            <tr>
+                                <td><input class="form-input form-input-sm field-name" type="text" value="{{ f.name }}"></td>
+                                <td>
+                                    <select class="form-input form-input-sm field-type">
+                                        <option value="text"{% if f.field_type == "text" %} selected{% endif %}>text</option>
+                                        <option value="number"{% if f.field_type == "number" %} selected{% endif %}>number</option>
+                                        <option value="boolean"{% if f.field_type == "boolean" %} selected{% endif %}>boolean</option>
+                                        <option value="date"{% if f.field_type == "date" %} selected{% endif %}>date</option>
+                                        <option value="email"{% if f.field_type == "email" %} selected{% endif %}>email</option>
+                                        <option value="url"{% if f.field_type == "url" %} selected{% endif %}>url</option>
+                                    </select>
+                                </td>
+                                <td class="text-center"><input class="form-checkbox field-required" type="checkbox"{% if f.required %} checked{% endif %}></td>
+                                <td>
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()" title="Remove field">
+                                        <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-5 py-3 border-t border-neutral-100">
+                    <button type="button" class="btn btn-default btn-sm" onclick="addFieldRow()">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Field
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button class="btn btn-primary" type="button" onclick="saveFields()">
+                    <i data-lucide="check" style="width:16px;height:16px;"></i> Save Fields
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+const FIELD_TYPES = ['text','number','boolean','date','email','url'];
+
+function addFieldRow(name, type, required) {
+    const tbody = document.getElementById('fields-body');
+    const tr = document.createElement('tr');
+    const opts = FIELD_TYPES.map(t =>
+        `<option value="${t}"${t === (type || 'text') ? ' selected' : ''}>${t}</option>`
+    ).join('');
+    tr.innerHTML = `
+        <td><input class="form-input form-input-sm field-name" type="text" value="${name || ''}"></td>
+        <td><select class="form-input form-input-sm field-type">${opts}</select></td>
+        <td class="text-center"><input class="form-checkbox field-required" type="checkbox"${required ? ' checked' : ''}></td>
+        <td><button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()" title="Remove field"><i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;"></i></button></td>`;
+    tbody.appendChild(tr);
+    lucide.createIcons();
+}
+
+async function saveFields() {
+    const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
+
+    const rows = document.querySelectorAll('#fields-body tr');
+    const fields = [];
+    for (const row of rows) {
+        const name = row.querySelector('.field-name').value.trim();
+        if (!name) continue;
+        fields.push({
+            name,
+            type: row.querySelector('.field-type').value,
+            required: row.querySelector('.field-required').checked
+        });
+    }
+
+    const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            name: '{{ endpoint.name }}',
+            fields: fields.length ? fields : null
+        })
+    });
+    if (res.ok) { alert('Fields saved!'); location.reload(); }
+    else { const d = await res.json(); alert(d.error); }
+}
+</script>
+{% endblock %}

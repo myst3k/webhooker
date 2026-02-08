@@ -4,142 +4,86 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <ul class="uk-breadcrumb">
+        <ul class="breadcrumb">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/endpoints/{{ endpoint.slug }}">{{ endpoint.name }}</a></li>
-            <li><span>Settings</span></li>
+            <li><a href="/endpoints/{{ endpoint_id }}">{{ endpoint.name }}</a></li>
+            <li><span class="current">Settings</span></li>
         </ul>
 
-        <h2>Endpoint Settings</h2>
+        <div class="page-header">
+            <h2>Endpoint Settings</h2>
+        </div>
 
         <div class="narrow-content">
-            <form id="settings-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="ep-name">Name</label>
-                    <input class="uk-input" type="text" id="ep-name" value="{{ endpoint.name }}" required>
+            <form id="settings-form">
+                <div class="space-y-4 mb-8">
+                    <div>
+                        <label class="form-label" for="ep-name">Name</label>
+                        <input class="form-input" type="text" id="ep-name" value="{{ endpoint.name }}" required>
+                    </div>
                 </div>
 
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="ep-slug">Slug</label>
-                    <input class="uk-input" type="text" id="ep-slug" value="{{ endpoint.slug }}" required pattern="[a-z0-9\-]+">
-                </div>
+                <h3 class="text-lg font-bold tracking-tight text-neutral-900 mb-4">Configuration</h3>
 
-                <h3>Settings</h3>
-
-                <div class="uk-card uk-card-default uk-card-body uk-margin">
-                    <div class="uk-grid-small uk-child-width-1-2@s" uk-grid>
+                <div class="card card-body space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="uk-form-label" for="rate-limit">Rate Limit</label>
-                            <input class="uk-input" type="number" id="rate-limit" value="{{ rate_limit }}" min="0">
-                            <span class="uk-text-meta">Max submissions per window</span>
+                            <label class="form-label" for="rate-limit">Rate Limit</label>
+                            <input class="form-input" type="number" id="rate-limit" value="{{ rate_limit }}" min="0">
+                            <span class="form-hint">Max submissions per window</span>
                         </div>
                         <div>
-                            <label class="uk-form-label" for="rate-window">Rate Window (seconds)</label>
-                            <input class="uk-input" type="number" id="rate-window" value="{{ rate_limit_window }}" min="1">
-                            <span class="uk-text-meta">Window duration in seconds</span>
+                            <label class="form-label" for="rate-window">Rate Window (seconds)</label>
+                            <input class="form-input" type="number" id="rate-window" value="{{ rate_limit_window }}" min="1">
+                            <span class="form-hint">Window duration in seconds</span>
                         </div>
                     </div>
 
-                    <div class="uk-margin">
-                        <label class="uk-form-label" for="cors-origins">CORS Origins</label>
-                        <input class="uk-input" type="text" id="cors-origins" value="{{ cors_origins }}">
-                        <span class="uk-text-meta">Comma-separated origins, leave empty for *</span>
+                    <div>
+                        <label class="form-label" for="cors-origins">CORS Origins</label>
+                        <input class="form-input" type="text" id="cors-origins" value="{{ cors_origins }}" placeholder="https://example.com">
+                        <span class="form-hint">Comma-separated origins, leave empty for *</span>
                     </div>
 
-                    <div class="uk-margin">
-                        <label class="uk-form-label" for="honeypot-field">Honeypot Field</label>
-                        <input class="uk-input" type="text" id="honeypot-field" value="{{ honeypot_field }}">
-                        <span class="uk-text-meta">Hidden field name — submissions with this filled are silently rejected</span>
+                    <div>
+                        <label class="form-label" for="honeypot-field">Honeypot Field</label>
+                        <input class="form-input" type="text" id="honeypot-field" value="{{ honeypot_field }}" placeholder="_hp">
+                        <span class="form-hint">Hidden field name - submissions with this filled are silently rejected</span>
                     </div>
 
-                    <div class="uk-margin">
-                        <label><input class="uk-checkbox" type="checkbox" id="store-metadata"{% if store_metadata %} checked{% endif %}> Store Metadata</label>
-                        <div><span class="uk-text-meta">Record IP, user-agent, referer</span></div>
+                    <div>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input class="form-checkbox" type="checkbox" id="store-metadata"{% if store_metadata %} checked{% endif %}>
+                            <div>
+                                <span class="text-sm font-semibold text-neutral-700">Store Metadata</span>
+                                <span class="form-hint mt-0">Record IP, user-agent, referer</span>
+                            </div>
+                        </label>
                     </div>
 
-                    <div class="uk-margin">
-                        <label class="uk-form-label" for="redirect-url">Redirect URL</label>
-                        <input class="uk-input" type="url" id="redirect-url" value="{{ redirect_url }}">
-                        <span class="uk-text-meta">Redirect here after form submission</span>
+                    <div>
+                        <label class="form-label" for="redirect-url">Redirect URL</label>
+                        <input class="form-input" type="url" id="redirect-url" value="{{ redirect_url }}" placeholder="https://example.com/thanks">
+                        <span class="form-hint">Redirect here after form submission</span>
                     </div>
 
-                    <div class="uk-margin">
-                        <label class="uk-form-label" for="retention-days">Retention Days</label>
-                        <input class="uk-input uk-form-width-small" type="number" id="retention-days" value="{{ retention_days }}" min="1">
-                        <span class="uk-text-meta">Auto-delete after N days, leave empty for forever</span>
-                    </div>
-                </div>
-
-                <h3>Fields</h3>
-                <p class="uk-text-meta">Define expected form fields. Submissions are still accepted for undefined fields.</p>
-
-                <div class="uk-card uk-card-default uk-margin">
-                    <div class="uk-overflow-auto">
-                        <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove" id="fields-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Required</th>
-                                    <th>Label</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="fields-body">
-                                {% for f in field_defs %}
-                                <tr>
-                                    <td><input class="uk-input uk-form-small field-name" type="text" value="{{ f.name }}"></td>
-                                    <td>
-                                        <select class="uk-select uk-form-small field-type">
-                                            <option value="text"{% if f.field_type == "text" %} selected{% endif %}>text</option>
-                                            <option value="email"{% if f.field_type == "email" %} selected{% endif %}>email</option>
-                                            <option value="url"{% if f.field_type == "url" %} selected{% endif %}>url</option>
-                                            <option value="textarea"{% if f.field_type == "textarea" %} selected{% endif %}>textarea</option>
-                                            <option value="number"{% if f.field_type == "number" %} selected{% endif %}>number</option>
-                                            <option value="integer"{% if f.field_type == "integer" %} selected{% endif %}>integer</option>
-                                            <option value="tel"{% if f.field_type == "tel" %} selected{% endif %}>tel</option>
-                                        </select>
-                                    </td>
-                                    <td><input class="uk-checkbox field-required" type="checkbox"{% if f.required %} checked{% endif %}></td>
-                                    <td><input class="uk-input uk-form-small field-label" type="text" value="{{ f.label }}"></td>
-                                    <td><button type="button" class="uk-button uk-button-danger uk-button-small" onclick="this.closest('tr').remove()">Delete</button></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="uk-card-body uk-padding-small">
-                        <button type="button" class="uk-button uk-button-default uk-button-small" onclick="addFieldRow()">
-                            <span uk-icon="icon: plus; ratio: 0.8"></span> Add Field
-                        </button>
+                    <div>
+                        <label class="form-label" for="retention-days">Retention Days</label>
+                        <input class="form-input w-32" type="number" id="retention-days" value="{{ retention_days }}" min="1" placeholder="30">
+                        <span class="form-hint">Auto-delete after N days, leave empty for forever</span>
                     </div>
                 </div>
 
-                <div class="uk-margin-top">
-                    <button class="uk-button uk-button-primary" type="button" onclick="saveSettings()">Save Settings</button>
+                <div class="mt-8">
+                    <button class="btn btn-primary" type="button" onclick="saveSettings()">
+                        <i data-lucide="check" style="width:16px;height:16px;"></i> Save Settings
+                    </button>
                 </div>
             </form>
         </div>
     </main>
 </div>
 <script>
-const FIELD_TYPES = ['text','email','url','textarea','number','integer','tel'];
-
-function addFieldRow(name, type, required, label) {
-    const tbody = document.getElementById('fields-body');
-    const tr = document.createElement('tr');
-    const opts = FIELD_TYPES.map(t =>
-        `<option value="${t}"${t === (type || 'text') ? ' selected' : ''}>${t}</option>`
-    ).join('');
-    tr.innerHTML = `
-        <td><input class="uk-input uk-form-small field-name" type="text" value="${name || ''}"></td>
-        <td><select class="uk-select uk-form-small field-type">${opts}</select></td>
-        <td><input class="uk-checkbox field-required" type="checkbox"${required ? ' checked' : ''}></td>
-        <td><input class="uk-input uk-form-small field-label" type="text" value="${label || ''}"></td>
-        <td><button type="button" class="uk-button uk-button-danger uk-button-small" onclick="this.closest('tr').remove()">Delete</button></td>`;
-    tbody.appendChild(tr);
-}
-
 async function saveSettings() {
     const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
 
@@ -157,26 +101,11 @@ async function saveSettings() {
         retention_days: retDays ? parseInt(retDays) : null
     };
 
-    const rows = document.querySelectorAll('#fields-body tr');
-    const fields = [];
-    for (const row of rows) {
-        const name = row.querySelector('.field-name').value.trim();
-        if (!name) continue;
-        fields.push({
-            name,
-            type: row.querySelector('.field-type').value,
-            required: row.querySelector('.field-required').checked,
-            label: row.querySelector('.field-label').value.trim()
-        });
-    }
-
     const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
             name: document.getElementById('ep-name').value,
-            slug: document.getElementById('ep-slug').value,
-            fields: fields.length ? fields : null,
             settings
         })
     });

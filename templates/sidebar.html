@@ -1,38 +1,39 @@
 <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <a href="/dashboard"><span uk-icon="icon: bolt; ratio: 1.1"></span> Webhooker</a>
+        <a href="/dashboard">
+            <span class="brand-icon"><i data-lucide="zap" style="width:18px;height:18px;color:#0a0a0a;"></i></span>
+            Webhooker
+        </a>
     </div>
-    <ul class="uk-nav uk-nav-default uk-margin-top">
-        <li class="uk-nav-header">Navigation</li>
-        <li><a href="/dashboard"><span uk-icon="icon: home; ratio: 0.8" class="uk-margin-small-right"></span>Dashboard</a></li>
-        <li class="uk-nav-divider"></li>
-        <li class="uk-nav-header">Settings</li>
-        <li><a href="/settings"><span uk-icon="icon: user; ratio: 0.8" class="uk-margin-small-right"></span>Account</a></li>
-        <li><a href="/settings/members"><span uk-icon="icon: users; ratio: 0.8" class="uk-margin-small-right"></span>Team</a></li>
-        <li><a href="/settings/smtp"><span uk-icon="icon: mail; ratio: 0.8" class="uk-margin-small-right"></span>SMTP</a></li>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-header">Navigation</li>
+        <li><a href="/dashboard"><i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i>Dashboard</a></li>
+        <li class="sidebar-nav-divider"></li>
+        <li class="sidebar-nav-header">Settings</li>
+        <li><a href="/settings"><i data-lucide="user" style="width:18px;height:18px;"></i>Account</a></li>
+        <li><a href="/settings/members"><i data-lucide="users" style="width:18px;height:18px;"></i>Team</a></li>
+        <li><a href="/settings/smtp"><i data-lucide="mail" style="width:18px;height:18px;"></i>SMTP</a></li>
         {% if is_system_admin %}
-        <li class="uk-nav-divider"></li>
-        <li class="uk-nav-header">Admin</li>
-        <li><a href="/admin/tenants"><span uk-icon="icon: world; ratio: 0.8" class="uk-margin-small-right"></span>Tenants</a></li>
-        <li><a href="/admin/users"><span uk-icon="icon: users; ratio: 0.8" class="uk-margin-small-right"></span>Users</a></li>
+        <li class="sidebar-nav-divider"></li>
+        <li class="sidebar-nav-header">Admin</li>
+        <li><a href="/admin/tenants"><i data-lucide="building-2" style="width:18px;height:18px;"></i>Tenants</a></li>
+        <li><a href="/admin/users"><i data-lucide="shield-check" style="width:18px;height:18px;"></i>Users</a></li>
         {% endif %}
     </ul>
     <div class="sidebar-footer">
-        <span class="uk-text-small uk-text-muted">{{ user_name }}</span>
-        <a href="#" class="uk-text-small"
+        <span class="user-name">{{ user_name }}</span>
+        <a href="#"
            onclick="fetch('/api/v1/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:''})}).then(()=>{document.cookie='access_token=;path=/;max-age=0';document.cookie='refresh_token=;path=/;max-age=0';location.href='/';})">
-            <span uk-icon="icon: sign-out; ratio: 0.8"></span> Logout
+            <i data-lucide="log-out" style="width:15px;height:15px;"></i> Logout
         </a>
     </div>
 </aside>
 <div class="sidebar-overlay" id="sidebar-overlay"
      onclick="document.getElementById('sidebar').classList.remove('open');this.classList.remove('active');"></div>
-<nav class="mobile-nav uk-navbar-container" uk-navbar>
-    <div class="uk-navbar-left">
-        <a class="uk-navbar-toggle" href="#"
-           onclick="event.preventDefault();document.getElementById('sidebar').classList.add('open');document.getElementById('sidebar-overlay').classList.add('active');">
-            <span uk-navbar-toggle-icon></span>
-        </a>
-        <a href="/dashboard" class="uk-navbar-item uk-logo">Webhooker</a>
-    </div>
+<nav class="mobile-nav">
+    <button class="menu-toggle"
+           onclick="document.getElementById('sidebar').classList.add('open');document.getElementById('sidebar-overlay').classList.add('active');">
+        <i data-lucide="menu" style="width:22px;height:22px;"></i>
+    </button>
+    <a href="/dashboard" class="mobile-brand">Webhooker</a>
 </nav>

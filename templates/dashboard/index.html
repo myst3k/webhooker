@@ -4,21 +4,23 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">Projects</h2>
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#new-project-dialog').show()">New Project</button>
+        <div class="page-header">
+            <h2>Projects</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('new-project-dialog')">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
+            </button>
         </div>
 
         {% if projects.is_empty() %}
         <div class="empty-state">
-            <p><span uk-icon="icon: folder; ratio: 2" class="uk-text-muted"></span></p>
-            <p>No projects yet. Create your first project to get started.</p>
+            <div class="empty-icon"><i data-lucide="folder" style="width:24px;height:24px;color:#94a3b8;"></i></div>
+            <p class="text-base font-medium text-neutral-500">No projects yet</p>
+            <p class="text-sm">Create your first project to get started.</p>
         </div>
         {% else %}
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -29,9 +31,9 @@
                     <tbody>
                         {% for project in projects %}
                         <tr>
-                            <td><a href="/projects/{{ project.slug }}">{{ project.name }}</a></td>
-                            <td>{{ project.endpoint_count }}</td>
-                            <td>{{ project.created_at }}</td>
+                            <td><a href="/projects/{{ project.id }}">{{ project.name }}</a></td>
+                            <td class="text-neutral-500">{{ project.endpoint_count }}</td>
+                            <td class="text-neutral-400 text-sm">{{ project.created_at }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -42,46 +44,31 @@
     </main>
 </div>
 
-<div id="new-project-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">New Project</h2>
+<div id="new-project-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>New Project</h2>
         </div>
-        <div class="uk-modal-body">
-            <form id="new-project-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="proj-name">Name</label>
-                    <input class="uk-input" type="text" id="proj-name" name="name" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="proj-slug">Slug</label>
-                    <input class="uk-input" type="text" id="proj-slug" name="slug" required pattern="[a-z0-9\-]+">
-                    <span class="uk-text-meta">URL-friendly identifier (lowercase, numbers, hyphens)</span>
-                </div>
-            </form>
+        <div class="modal-body">
+            <label class="form-label" for="proj-name">Name</label>
+            <input class="form-input" type="text" id="proj-name" name="name" placeholder="My Project" required>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="createProject()">Create</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="createProject()">Create Project</button>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('proj-name').addEventListener('input', (e) => {
-    document.getElementById('proj-slug').value = e.target.value
-        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-});
-
 async function createProject() {
     const name = document.getElementById('proj-name').value;
-    const slug = document.getElementById('proj-slug').value;
+    if (!name.trim()) return;
     const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
     const res = await fetch('/api/v1/projects', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-        body: JSON.stringify({name, slug})
+        body: JSON.stringify({name})
     });
     if (res.ok) { location.reload(); }
     else { const d = await res.json(); alert(d.error); }

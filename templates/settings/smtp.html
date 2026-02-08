@@ -4,49 +4,65 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <h2>Tenant SMTP Configuration</h2>
-        <p class="uk-text-meta">Configure SMTP for action emails. This is separate from system SMTP used for password resets.</p>
+        <div class="page-header">
+            <div>
+                <h2>SMTP Configuration</h2>
+                <p class="text-sm text-neutral-400 mt-1">Configure SMTP for action emails. Separate from system SMTP used for password resets.</p>
+            </div>
+        </div>
 
         <div class="narrow-content">
-            <form id="smtp-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-host">SMTP Host</label>
-                    <input class="uk-input" type="text" id="smtp-host" value="{{ smtp_host }}" required>
+            <form id="smtp-form" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label" for="smtp-host">SMTP Host</label>
+                        <input class="form-input" type="text" id="smtp-host" value="{{ smtp_host }}" placeholder="smtp.example.com" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="smtp-port">Port</label>
+                        <input class="form-input" type="number" id="smtp-port" value="{{ smtp_port }}" placeholder="587" required>
+                    </div>
                 </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-port">Port</label>
-                    <input class="uk-input uk-form-width-small" type="number" id="smtp-port" value="{{ smtp_port }}" required>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label" for="smtp-user">Username</label>
+                        <input class="form-input" type="text" id="smtp-user" placeholder="user@example.com" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="smtp-pass">Password</label>
+                        <input class="form-input" type="password" id="smtp-pass" required>
+                    </div>
                 </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-user">Username</label>
-                    <input class="uk-input" type="text" id="smtp-user" required>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label" for="smtp-from">From Address</label>
+                        <input class="form-input" type="email" id="smtp-from" value="{{ smtp_from }}" placeholder="noreply@example.com" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="smtp-from-name">From Name</label>
+                        <input class="form-input" type="text" id="smtp-from-name" value="{{ smtp_from_name }}" placeholder="My App (optional)">
+                    </div>
                 </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-pass">Password</label>
-                    <input class="uk-input" type="password" id="smtp-pass" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-from">From Address</label>
-                    <input class="uk-input" type="email" id="smtp-from" value="{{ smtp_from }}" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-from-name">From Name (optional)</label>
-                    <input class="uk-input" type="text" id="smtp-from-name" value="{{ smtp_from_name }}">
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="smtp-tls">TLS Mode</label>
-                    <select class="uk-select" id="smtp-tls">
+                <div>
+                    <label class="form-label" for="smtp-tls">TLS Mode</label>
+                    <select class="form-input" id="smtp-tls">
                         <option value="starttls" {% if smtp_tls == "starttls" %}selected{% endif %}>STARTTLS</option>
                         <option value="tls" {% if smtp_tls == "tls" %}selected{% endif %}>TLS</option>
                         <option value="none" {% if smtp_tls == "none" %}selected{% endif %}>None</option>
                     </select>
                 </div>
 
-                <div>
-                    <button class="uk-button uk-button-primary" type="button" onclick="saveSMTP()">Save</button>
-                    <button class="uk-button uk-button-default" type="button" onclick="testSMTP()">Send Test Email</button>
+                <div class="flex gap-3 pt-2">
+                    <button class="btn btn-primary" type="button" onclick="saveSMTP()">
+                        <i data-lucide="check" style="width:15px;height:15px;"></i> Save
+                    </button>
+                    <button class="btn btn-default" type="button" onclick="testSMTP()">
+                        <i data-lucide="send" style="width:15px;height:15px;"></i> Send Test
+                    </button>
                     {% if smtp_configured %}
-                    <button class="uk-button uk-button-danger" type="button" onclick="deleteSMTP()">Remove</button>
+                    <button class="btn btn-danger" type="button" onclick="deleteSMTP()">
+                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i> Remove
+                    </button>
                     {% endif %}
                 </div>
             </form>

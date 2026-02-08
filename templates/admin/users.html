@@ -4,36 +4,46 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">Users</h2>
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#new-user-dialog').show()">New User</button>
+        <div class="page-header">
+            <h2>Users</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('new-user-dialog')">
+                <i data-lucide="user-plus" style="width:16px;height:16px;"></i> New User
+            </button>
         </div>
 
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
+                            <th>User</th>
                             <th>Email</th>
                             <th>Role</th>
                             <th>Admin</th>
                             <th>Created</th>
-                            <th></th>
+                            <th class="w-16"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
                         <tr>
-                            <td>{{ user.name }}</td>
-                            <td>{{ user.email }}</td>
-                            <td><span class="uk-label">{{ user.role }}</span></td>
-                            <td>{% if user.is_system_admin %}<span class="uk-label uk-label-success">Yes</span>{% else %}<span class="uk-label uk-label-danger">No</span>{% endif %}</td>
-                            <td>{{ user.created_at.format("%Y-%m-%d") }}</td>
                             <td>
-                                <button class="uk-button uk-button-default uk-button-small"
-                                        onclick="deleteUser('{{ user.id }}','{{ user.name }}')">Delete</button>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-xs font-bold text-neutral-500">{{ user.name.chars().next().unwrap_or('?') }}</span>
+                                    </div>
+                                    <span class="font-semibold text-neutral-700">{{ user.name }}</span>
+                                </div>
+                            </td>
+                            <td class="text-neutral-500">{{ user.email }}</td>
+                            <td><span class="badge badge-default">{{ user.role }}</span></td>
+                            <td>{% if user.is_system_admin %}<span class="badge badge-success">Yes</span>{% else %}<span class="badge badge-danger">No</span>{% endif %}</td>
+                            <td class="text-neutral-400 text-sm">{{ user.created_at.format("%Y-%m-%d") }}</td>
+                            <td>
+                                <button class="btn btn-ghost btn-sm"
+                                        onclick="deleteUser('{{ user.id }}','{{ user.name }}')" title="Delete user">
+                                    <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -44,47 +54,44 @@
     </main>
 </div>
 
-<div id="new-user-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">New User</h2>
+<div id="new-user-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>New User</h2>
         </div>
-        <div class="uk-modal-body">
-            <form class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="user-name">Name</label>
-                    <input class="uk-input" type="text" id="user-name" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="user-email">Email</label>
-                    <input class="uk-input" type="email" id="user-email" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="user-password">Password</label>
-                    <input class="uk-input" type="password" id="user-password" required minlength="8">
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="user-tenant">Tenant</label>
-                    <select class="uk-select" id="user-tenant" required>
-                        <option value="">Select a tenant...</option>
-                        {% for tenant in tenants %}
-                        <option value="{{ tenant.id }}">{{ tenant.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="user-role">Role</label>
-                    <select class="uk-select" id="user-role">
-                        <option value="member">Member</option>
-                        <option value="owner">Owner</option>
-                    </select>
-                </div>
-            </form>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label" for="user-name">Name</label>
+                <input class="form-input" type="text" id="user-name" placeholder="John Doe" required>
+            </div>
+            <div>
+                <label class="form-label" for="user-email">Email</label>
+                <input class="form-input" type="email" id="user-email" placeholder="john@company.com" required>
+            </div>
+            <div>
+                <label class="form-label" for="user-password">Password</label>
+                <input class="form-input" type="password" id="user-password" placeholder="Min. 8 characters" required minlength="8">
+            </div>
+            <div>
+                <label class="form-label" for="user-tenant">Tenant</label>
+                <select class="form-input" id="user-tenant" required>
+                    <option value="">Select a tenant...</option>
+                    {% for tenant in tenants %}
+                    <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="user-role">Role</label>
+                <select class="form-input" id="user-role">
+                    <option value="member">Member</option>
+                    <option value="owner">Owner</option>
+                </select>
+            </div>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="createUser()">Create</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="createUser()">Create User</button>
         </div>
     </div>
 </div>

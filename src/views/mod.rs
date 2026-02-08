@@ -21,12 +21,13 @@ pub fn view_routes() -> Router<SharedState> {
         // Dashboard
         .route("/dashboard", get(dashboard::index))
         // Projects
-        .route("/projects/{slug}", get(projects::show))
+        .route("/projects/{id}", get(projects::show))
         // Endpoints
-        .route("/endpoints/{slug}", get(endpoints::submissions_page))
-        .route("/endpoints/{slug}/settings", get(endpoints::settings_page))
-        .route("/endpoints/{slug}/actions", get(endpoints::actions_page))
-        .route("/endpoints/{slug}/snippet", get(endpoints::snippet_page))
+        .route("/endpoints/{id}", get(endpoints::submissions_page))
+        .route("/endpoints/{id}/settings", get(endpoints::settings_page))
+        .route("/endpoints/{id}/fields", get(endpoints::fields_page))
+        .route("/endpoints/{id}/actions", get(endpoints::actions_page))
+        .route("/endpoints/{id}/snippet", get(endpoints::snippet_page))
         // Settings
         .route("/settings", get(settings::account_page))
         .route("/settings/smtp", get(settings::smtp_page))

@@ -1,32 +1,33 @@
 {% if rows.is_empty() %}
 <div class="empty-state">
-    <p><span uk-icon="icon: database; ratio: 2" class="uk-text-muted"></span></p>
-    <p>No submissions yet.</p>
+    <div class="empty-icon"><i data-lucide="inbox" style="width:24px;height:24px;color:#94a3b8;"></i></div>
+    <p class="text-base font-medium text-neutral-500">No submissions yet</p>
+    <p class="text-sm">Submissions will appear here when your endpoint receives data.</p>
 </div>
 {% else %}
-<div class="uk-card uk-card-default">
-    <div class="uk-overflow-auto">
-        <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="data-table">
             <thead>
                 <tr>
                     {% for col in field_names %}
                     {% let opposite_order %}
                     {% if sort_by == *col %}{% if sort_order == "asc" %}{% let opposite_order = "desc" %}{% else %}{% let opposite_order = "asc" %}{% endif %}{% else %}{% let opposite_order = "asc" %}{% endif %}
-                    <th class="uk-text-nowrap" style="cursor:pointer"
+                    <th class="whitespace-nowrap cursor-pointer select-none hover:text-neutral-600"
                         hx-get="/htmx/submissions/{{ endpoint_id }}?sort_by={{ col }}&amp;sort_order={{ opposite_order }}&amp;search={{ search }}"
                         hx-target="#submissions-table">
                         {{ col }}
                         {% if sort_by == *col %}
-                            {% if sort_order == "asc" %}&#9650;{% else %}&#9660;{% endif %}
+                            <span class="text-neutral-700">{% if sort_order == "asc" %}&#9650;{% else %}&#9660;{% endif %}</span>
                         {% endif %}
                     </th>
                     {% endfor %}
-                    <th class="uk-text-nowrap" style="cursor:pointer"
+                    <th class="whitespace-nowrap cursor-pointer select-none hover:text-neutral-600"
                         hx-get="/htmx/submissions/{{ endpoint_id }}?sort_by=created_at&amp;sort_order={% if sort_by == "created_at" %}{% if sort_order == "asc" %}desc{% else %}asc{% endif %}{% else %}asc{% endif %}&amp;search={{ search }}"
                         hx-target="#submissions-table">
                         Time
                         {% if sort_by == "created_at" %}
-                            {% if sort_order == "asc" %}&#9650;{% else %}&#9660;{% endif %}
+                            <span class="text-neutral-700">{% if sort_order == "asc" %}&#9650;{% else %}&#9660;{% endif %}</span>
                         {% endif %}
                     </th>
                     <th></th>
@@ -38,15 +39,15 @@
                     {% for cell in row.cells %}
                     <td>{{ cell }}</td>
                     {% endfor %}
-                    <td class="uk-text-nowrap">{{ row.created_at }}</td>
+                    <td class="whitespace-nowrap text-neutral-400 text-sm">{{ row.created_at }}</td>
                     <td>
                         <details>
-                            <summary class="uk-text-small uk-text-primary" style="cursor:pointer">Details</summary>
-                            <div class="uk-text-small uk-margin-small-top">
-                                <strong>ID:</strong> <code>{{ row.id }}</code><br>
-                                <strong>Extras:</strong> <pre>{{ row.extras }}</pre>
-                                <strong>Metadata:</strong> <pre>{{ row.metadata }}</pre>
-                                <strong>Raw:</strong> <pre style="max-height:200px; overflow:auto;">{{ row.raw }}</pre>
+                            <summary class="text-sm font-medium text-neutral-700 cursor-pointer hover:text-neutral-900">Details</summary>
+                            <div class="text-sm mt-3 space-y-2">
+                                <div><span class="font-semibold text-neutral-600">ID:</span> <code class="text-xs">{{ row.id }}</code></div>
+                                <div><span class="font-semibold text-neutral-600">Extras:</span> <pre class="mt-1 text-xs">{{ row.extras }}</pre></div>
+                                <div><span class="font-semibold text-neutral-600">Metadata:</span> <pre class="mt-1 text-xs">{{ row.metadata }}</pre></div>
+                                <div><span class="font-semibold text-neutral-600">Raw:</span> <pre class="mt-1 text-xs" style="max-height:200px; overflow:auto;">{{ row.raw }}</pre></div>
                             </div>
                         </details>
                     </td>
@@ -57,18 +58,22 @@
     </div>
 </div>
 
-<div class="uk-flex uk-flex-between uk-flex-middle uk-margin-small-top">
-    <span class="uk-text-small uk-text-muted">{{ total }} submissions — Page {{ page }} of {{ total_pages }}</span>
-    <div>
+<div class="flex items-center justify-between mt-4">
+    <span class="text-sm text-neutral-400">{{ total }} submissions &middot; Page {{ page }} of {{ total_pages }}</span>
+    <div class="flex gap-2">
         {% if page > 1 %}
-        <button class="uk-button uk-button-default uk-button-small"
+        <button class="btn btn-default btn-sm"
                 hx-get="/htmx/submissions/{{ endpoint_id }}?page={{ page - 1 }}&amp;sort_by={{ sort_by }}&amp;sort_order={{ sort_order }}&amp;search={{ search }}"
-                hx-target="#submissions-table">Previous</button>
+                hx-target="#submissions-table">
+            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
+        </button>
         {% endif %}
         {% if page < total_pages %}
-        <button class="uk-button uk-button-default uk-button-small"
+        <button class="btn btn-default btn-sm"
                 hx-get="/htmx/submissions/{{ endpoint_id }}?page={{ page + 1 }}&amp;sort_by={{ sort_by }}&amp;sort_order={{ sort_order }}&amp;search={{ search }}"
-                hx-target="#submissions-table">Next</button>
+                hx-target="#submissions-table">
+            Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+        </button>
         {% endif %}
     </div>
 </div>

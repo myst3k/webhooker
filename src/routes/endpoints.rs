@@ -13,7 +13,7 @@ use crate::state::SharedState;
 #[derive(Deserialize)]
 pub struct CreateEndpoint {
     pub name: String,
-    pub slug: String,
+    pub slug: Option<String>,
     pub fields: Option<serde_json::Value>,
     pub settings: Option<serde_json::Value>,
 }
@@ -21,7 +21,7 @@ pub struct CreateEndpoint {
 #[derive(Deserialize)]
 pub struct UpdateEndpoint {
     pub name: String,
-    pub slug: String,
+    pub slug: Option<String>,
     pub fields: Option<serde_json::Value>,
     pub settings: Option<serde_json::Value>,
 }
@@ -51,13 +51,14 @@ pub async fn create(
         .await?
         .ok_or_else(|| AppError::NotFound("Project not found".to_string()))?;
 
-    validate_slug(&req.slug)?;
+    let slug = req.slug.unwrap_or_else(|| slugify(&req.name));
+    validate_slug(&slug)?;
 
     let endpoint = db::endpoints::create(
         &state.pool,
         project_id,
         &req.name,
-        &req.slug,
+        &slug,
         req.fields.as_ref(),
         req.settings.as_ref(),
     )
@@ -100,14 +101,15 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateEndpoint>,
 ) -> Result<Json<Endpoint>, AppError> {
-    validate_slug(&req.slug)?;
+    let slug = req.slug.unwrap_or_else(|| slugify(&req.name));
+    validate_slug(&slug)?;
 
     let endpoint = db::endpoints::update(
         &state.pool,
         id,
         auth.tenant_id(),
         &req.name,
-        &req.slug,
+        &slug,
         req.fields.as_ref(),
         req.settings.as_ref(),
     )
@@ -150,6 +152,17 @@ pub async fn delete(
     .await;
 
     Ok(Json(serde_json::json!({ "message": "Deleted" })))
+}
+
+fn slugify(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn validate_slug(slug: &str) -> Result<(), AppError> {

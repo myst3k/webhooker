@@ -1,6 +1,7 @@
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::response::{Html, IntoResponse};
+use uuid::Uuid;
 
 use crate::auth::extractor::AuthUser;
 use crate::db;
@@ -15,7 +16,6 @@ struct ProjectTemplate {
     user_name: String,
     is_system_admin: bool,
     project_name: String,
-    project_slug: String,
     project_id: String,
     endpoints: Vec<Endpoint>,
 }
@@ -23,9 +23,9 @@ struct ProjectTemplate {
 pub async fn show(
     auth: AuthUser,
     State(state): State<SharedState>,
-    Path(slug): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = db::projects::find_by_slug(&state.pool, &slug, auth.tenant_id())
+    let project = db::projects::find_by_id(&state.pool, id, auth.tenant_id())
         .await?
         .ok_or_else(|| AppError::NotFound("Project not found".to_string()))?;
 
@@ -40,7 +40,6 @@ pub async fn show(
         user_name: user,
         is_system_admin: auth.is_system_admin,
         project_name: project.name,
-        project_slug: project.slug,
         project_id: project.id.to_string(),
         endpoints,
     };

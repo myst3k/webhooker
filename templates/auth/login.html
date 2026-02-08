@@ -1,52 +1,70 @@
 {% extends "base.html" %}
 {% block title %}Login - Webhooker{% endblock %}
 {% block body %}
-<main class="auth-container">
-    <div class="uk-card uk-card-default">
-        <div class="uk-card-header uk-text-center">
-            <h2>Webhooker</h2>
-            <p class="uk-text-meta">Sign in to your account</p>
-        </div>
-        <div class="uk-card-body">
-            {% if let Some(err) = error %}
-            <div class="uk-alert uk-alert-danger" uk-alert>{{ err }}</div>
-            {% endif %}
-            <form id="login-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="email">Email</label>
-                    <input class="uk-input" type="email" id="email" name="email" required autofocus>
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="card">
+            <div class="card-body">
+                <div class="auth-logo">
+                    <div class="logo-icon">
+                        <i data-lucide="zap" style="width:24px;height:24px;color:#fff;"></i>
+                    </div>
+                    <h1>Webhooker</h1>
+                    <p>Sign in to your account</p>
                 </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="password">Password</label>
-                    <input class="uk-input" type="password" id="password" name="password" required>
+                {% if let Some(err) = error %}
+                <div class="alert alert-danger">
+                    <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
+                    {{ err }}
                 </div>
-                <button class="uk-button uk-button-primary uk-width-1-1" type="submit">Sign In</button>
-            </form>
-            <p class="uk-text-center uk-margin-top">
-                <a href="/auth/forgot-password">Forgot password?</a>
-            </p>
+                {% endif %}
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="form-label" for="email">Email</label>
+                        <input class="form-input" type="email" id="email" name="email" placeholder="you@company.com" required autofocus>
+                    </div>
+                    <div>
+                        <label class="form-label" for="password">Password</label>
+                        <input class="form-input" type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <button class="btn btn-primary w-full" type="submit">Sign In</button>
+                </form>
+                <p class="text-center mt-5 text-sm text-neutral-500">
+                    <a href="/auth/forgot-password" class="hover:text-neutral-900">Forgot your password?</a>
+                </p>
+            </div>
         </div>
     </div>
-</main>
+</div>
 <script>
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            email: form.email.value,
-            password: form.password.value
-        })
-    });
-    const data = await res.json();
-    if (res.ok) {
-        document.cookie = `access_token=${data.access_token};path=/;max-age=900;SameSite=Lax`;
-        document.cookie = `refresh_token=${data.refresh_token};path=/;max-age=604800;SameSite=Lax`;
-        location.href = '/dashboard';
-    } else {
-        alert(data.error || 'Login failed');
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    try {
+        const res = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: form.email.value,
+                password: form.password.value
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            document.cookie = `access_token=${data.access_token};path=/;max-age=900;SameSite=Lax`;
+            document.cookie = `refresh_token=${data.refresh_token};path=/;max-age=604800;SameSite=Lax`;
+            location.href = '/dashboard';
+        } else {
+            alert(data.error || 'Login failed');
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+        }
+    } catch {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
     }
 });
 </script>

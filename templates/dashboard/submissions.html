@@ -4,48 +4,65 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <ul class="uk-breadcrumb">
+        <ul class="breadcrumb">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/projects/{{ project_name|lower }}">{{ project_name }}</a></li>
-            <li><span>{{ endpoint.name }}</span></li>
+            <li><a href="/dashboard">{{ project_name }}</a></li>
+            <li><span class="current">{{ endpoint.name }}</span></li>
         </ul>
 
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-bottom" uk-grid>
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-8">
             <div>
-                <h2 class="uk-margin-remove">{{ endpoint.name }}</h2>
+                <h2 class="text-2xl font-extrabold tracking-tight text-neutral-900">{{ endpoint.name }}</h2>
+                <div class="mt-2">
+                    <code class="text-xs">POST {{ base_url }}/v1/e/{{ endpoint_id }}</code>
+                </div>
             </div>
-            <div>
-                <a href="/endpoints/{{ endpoint.slug }}/snippet" class="uk-button uk-button-default uk-button-small">Snippet</a>
-                <a href="/endpoints/{{ endpoint.slug }}/actions" class="uk-button uk-button-default uk-button-small">Actions</a>
-                <a href="/endpoints/{{ endpoint.slug }}/settings" class="uk-button uk-button-default uk-button-small">Settings</a>
+            <div class="flex gap-2 flex-wrap">
+                <a href="/endpoints/{{ endpoint_id }}/snippet" class="btn btn-default btn-sm">
+                    <i data-lucide="code-2" style="width:14px;height:14px;"></i> Snippet
+                </a>
+                <a href="/endpoints/{{ endpoint_id }}/actions" class="btn btn-default btn-sm">
+                    <i data-lucide="workflow" style="width:14px;height:14px;"></i> Actions
+                </a>
+                <a href="/endpoints/{{ endpoint_id }}/fields" class="btn btn-default btn-sm">
+                    <i data-lucide="list" style="width:14px;height:14px;"></i> Fields
+                </a>
+                <a href="/endpoints/{{ endpoint_id }}/settings" class="btn btn-default btn-sm">
+                    <i data-lucide="settings" style="width:14px;height:14px;"></i> Settings
+                </a>
             </div>
         </div>
 
-        <p><code>POST {{ base_url }}/v1/e/{{ endpoint_id }}</code></p>
-
-        <div class="uk-margin">
-            <input class="uk-input" type="search" placeholder="Search submissions..."
-                   hx-get="/htmx/submissions/{{ endpoint_id }}"
-                   hx-trigger="keyup changed delay:300ms"
-                   hx-target="#submissions-table"
-                   hx-include="this"
-                   name="search">
+        <div class="mb-4">
+            <div class="relative">
+                <i data-lucide="search" style="width:16px;height:16px;" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"></i>
+                <input class="form-input pl-10" type="search" placeholder="Search submissions..."
+                       hx-get="/htmx/submissions/{{ endpoint_id }}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#submissions-table"
+                       hx-include="this"
+                       name="search">
+            </div>
         </div>
 
-        <div class="uk-margin-small-bottom">
+        <div class="mb-6 flex gap-2">
             <a href="/api/v1/endpoints/{{ endpoint_id }}/submissions/export?format=csv"
-               target="_blank" class="uk-button uk-button-default uk-button-small">Export CSV</a>
+               target="_blank" class="btn btn-default btn-sm">
+                <i data-lucide="download" style="width:14px;height:14px;"></i> CSV
+            </a>
             <a href="/api/v1/endpoints/{{ endpoint_id }}/submissions/export?format=json"
-               target="_blank" class="uk-button uk-button-default uk-button-small">Export JSON</a>
+               target="_blank" class="btn btn-default btn-sm">
+                <i data-lucide="download" style="width:14px;height:14px;"></i> JSON
+            </a>
         </div>
 
         <div id="submissions-table"
              hx-get="/htmx/submissions/{{ endpoint_id }}"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="uk-text-center uk-padding">
-                <div uk-spinner></div>
-                <p class="uk-text-muted">Loading submissions...</p>
+            <div class="text-center py-16">
+                <div class="spinner mx-auto"></div>
+                <p class="text-neutral-400 mt-4 text-sm">Loading submissions...</p>
             </div>
         </div>
     </main>

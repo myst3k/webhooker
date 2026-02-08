@@ -4,35 +4,48 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">Team Members</h2>
+        <div class="page-header">
+            <h2>Team Members</h2>
             {% if is_owner || is_system_admin %}
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#add-member-dialog').show()">Add Member</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('add-member-dialog')">
+                <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Add Member
+            </button>
             {% endif %}
         </div>
 
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
+                            <th>Member</th>
                             <th>Email</th>
                             <th>Role</th>
-                            <th></th>
+                            <th class="w-16"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for member in members %}
                         <tr>
-                            <td>{{ member.name }}{% if member.is_system_admin %} <span class="uk-label">Admin</span>{% endif %}</td>
-                            <td>{{ member.email }}</td>
-                            <td><span class="uk-label">{{ member.role }}</span></td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-xs font-bold text-neutral-500">{{ member.name.chars().next().unwrap_or('?') }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-semibold text-neutral-700">{{ member.name }}</span>
+                                        {% if member.is_system_admin %} <span class="badge badge-default ml-1">Admin</span>{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-neutral-500">{{ member.email }}</td>
+                            <td><span class="badge badge-default">{{ member.role }}</span></td>
                             <td>
                                 {% if is_owner || is_system_admin %}
-                                <button class="uk-button uk-button-default uk-button-small"
-                                        onclick="removeMember('{{ member.id }}','{{ member.name }}')">Remove</button>
+                                <button class="btn btn-ghost btn-sm"
+                                        onclick="removeMember('{{ member.id }}','{{ member.name }}')" title="Remove member">
+                                    <i data-lucide="user-minus" style="width:14px;height:14px;color:#ef4444;"></i>
+                                </button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -45,38 +58,35 @@
 </div>
 
 {% if is_owner || is_system_admin %}
-<div id="add-member-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">Add Member</h2>
+<div id="add-member-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>Add Team Member</h2>
         </div>
-        <div class="uk-modal-body">
-            <form id="add-member-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="member-name">Name</label>
-                    <input class="uk-input" type="text" id="member-name" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="member-email">Email</label>
-                    <input class="uk-input" type="email" id="member-email" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="member-password">Password</label>
-                    <input class="uk-input" type="password" id="member-password" required minlength="8">
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="member-role">Role</label>
-                    <select class="uk-select" id="member-role">
-                        <option value="member">Member</option>
-                        <option value="owner">Owner</option>
-                    </select>
-                </div>
-            </form>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label" for="member-name">Name</label>
+                <input class="form-input" type="text" id="member-name" placeholder="Jane Smith" required>
+            </div>
+            <div>
+                <label class="form-label" for="member-email">Email</label>
+                <input class="form-input" type="email" id="member-email" placeholder="jane@company.com" required>
+            </div>
+            <div>
+                <label class="form-label" for="member-password">Password</label>
+                <input class="form-input" type="password" id="member-password" placeholder="Min. 8 characters" required minlength="8">
+            </div>
+            <div>
+                <label class="form-label" for="member-role">Role</label>
+                <select class="form-input" id="member-role">
+                    <option value="member">Member</option>
+                    <option value="owner">Owner</option>
+                </select>
+            </div>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="addMember()">Add</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="addMember()">Add Member</button>
         </div>
     </div>
 </div>

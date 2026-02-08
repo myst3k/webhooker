@@ -4,38 +4,49 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <h2>Account Settings</h2>
+        <div class="page-header">
+            <h2>Account Settings</h2>
+        </div>
 
-        <div class="narrow-content">
-            <div class="uk-card uk-card-default uk-margin">
-                <div class="uk-card-header">
-                    <h3 class="uk-card-title">Profile</h3>
+        <div class="narrow-content space-y-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Profile</h3>
                 </div>
-                <div class="uk-card-body">
-                    <p><strong>Name:</strong> {{ user_name }}</p>
-                    <p><strong>Email:</strong> {{ user_email }}</p>
+                <div class="card-body space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center">
+                            <i data-lucide="user" style="width:18px;height:18px;color:#525252;"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-neutral-800">{{ user_name }}</p>
+                            <p class="text-sm text-neutral-400">{{ user_email }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="uk-card uk-card-default uk-margin">
-                <div class="uk-card-header">
-                    <h3 class="uk-card-title">Change Password</h3>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Change Password</h3>
                 </div>
-                <div class="uk-card-body">
-                    <form id="password-form" class="uk-form-stacked">
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="current">Current Password</label>
-                            <input class="uk-input" type="password" id="current" required>
+                <div class="card-body">
+                    <form id="password-form" class="space-y-4">
+                        <div>
+                            <label class="form-label" for="current">Current Password</label>
+                            <input class="form-input" type="password" id="current" required>
                         </div>
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="newpw">New Password</label>
-                            <input class="uk-input" type="password" id="newpw" required minlength="8">
+                        <div>
+                            <label class="form-label" for="newpw">New Password</label>
+                            <input class="form-input" type="password" id="newpw" required minlength="8" placeholder="Min. 8 characters">
                         </div>
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="confirm">Confirm Password</label>
-                            <input class="uk-input" type="password" id="confirm" required minlength="8">
+                        <div>
+                            <label class="form-label" for="confirm">Confirm Password</label>
+                            <input class="form-input" type="password" id="confirm" required minlength="8" placeholder="Repeat password">
                         </div>
-                        <button class="uk-button uk-button-primary" type="submit">Change Password</button>
+                        <button class="btn btn-primary" type="submit">
+                            <i data-lucide="lock" style="width:15px;height:15px;"></i> Change Password
+                        </button>
                     </form>
                 </div>
             </div>

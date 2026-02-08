@@ -71,19 +71,41 @@ pub fn validate_fields(
                 if required && s.is_empty() {
                     warnings.push(format!("Required field is empty: {name}"));
                 }
-                if field_type == "email" && !s.contains('@') {
-                    warnings.push(format!("Invalid email format: {name}"));
-                }
-                if field_type == "url" && !s.starts_with("http") {
-                    warnings.push(format!("Invalid URL format: {name}"));
-                }
-                if field_type == "number" && s.parse::<f64>().is_err() {
-                    warnings.push(format!("Invalid number format: {name}"));
-                }
-                if field_type == "integer" && s.parse::<i64>().is_err() {
-                    warnings.push(format!("Invalid integer format: {name}"));
+                match field_type {
+                    "email" if !s.contains('@') => {
+                        warnings.push(format!("Invalid email format: {name}"));
+                    }
+                    "url" if !s.starts_with("http") => {
+                        warnings.push(format!("Invalid URL format: {name}"));
+                    }
+                    "number" if s.parse::<f64>().is_err() => {
+                        warnings.push(format!("Invalid number format: {name}"));
+                    }
+                    "boolean" if !matches!(s.as_str(), "true" | "false" | "1" | "0" | "yes" | "no") => {
+                        warnings.push(format!("Invalid boolean format: {name}"));
+                    }
+                    "date" => {
+                        // Accept ISO 8601: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS...
+                        let valid = s.len() >= 10
+                            && s.as_bytes().get(4) == Some(&b'-')
+                            && s.as_bytes().get(7) == Some(&b'-')
+                            && s[..4].parse::<u16>().is_ok()
+                            && s[5..7].parse::<u8>().is_ok()
+                            && s[8..10].parse::<u8>().is_ok();
+                        if !valid {
+                            warnings.push(format!("Invalid date format: {name}"));
+                        }
+                    }
+                    _ => {}
                 }
             }
+            Some(Value::Number(_)) if field_type == "boolean" => {
+                warnings.push(format!("Expected boolean, got number: {name}"));
+            }
+            Some(Value::Bool(_)) if field_type == "number" => {
+                warnings.push(format!("Expected number, got boolean: {name}"));
+            }
+            // JSON numbers and booleans are accepted natively for their respective types
             _ => {}
         }
     }

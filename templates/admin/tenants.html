@@ -4,32 +4,35 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">Tenants</h2>
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#new-tenant-dialog').show()">New Tenant</button>
+        <div class="page-header">
+            <h2>Tenants</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('new-tenant-dialog')">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> New Tenant
+            </button>
         </div>
 
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Slug</th>
                             <th>Created</th>
-                            <th></th>
+                            <th class="w-16"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tenant in tenants %}
                         <tr>
-                            <td>{{ tenant.name }}</td>
+                            <td class="font-semibold text-neutral-700">{{ tenant.name }}</td>
                             <td><code>{{ tenant.slug }}</code></td>
-                            <td>{{ tenant.created_at.format("%Y-%m-%d") }}</td>
+                            <td class="text-neutral-400 text-sm">{{ tenant.created_at.format("%Y-%m-%d") }}</td>
                             <td>
-                                <button class="uk-button uk-button-default uk-button-small"
-                                        onclick="deleteTenant('{{ tenant.id }}','{{ tenant.name }}')">Delete</button>
+                                <button class="btn btn-ghost btn-sm"
+                                        onclick="deleteTenant('{{ tenant.id }}','{{ tenant.name }}')" title="Delete tenant">
+                                    <i data-lucide="trash-2" style="width:14px;height:14px;color:#ef4444;"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -40,27 +43,24 @@
     </main>
 </div>
 
-<div id="new-tenant-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">New Tenant</h2>
+<div id="new-tenant-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>New Tenant</h2>
         </div>
-        <div class="uk-modal-body">
-            <form class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="tenant-name">Name</label>
-                    <input class="uk-input" type="text" id="tenant-name" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="tenant-slug">Slug</label>
-                    <input class="uk-input" type="text" id="tenant-slug" required pattern="[a-z0-9\-]+">
-                </div>
-            </form>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label" for="tenant-name">Name</label>
+                <input class="form-input" type="text" id="tenant-name" placeholder="Acme Corp" required>
+            </div>
+            <div>
+                <label class="form-label" for="tenant-slug">Slug</label>
+                <input class="form-input" type="text" id="tenant-slug" placeholder="acme-corp" required pattern="[a-z0-9\-]+">
+            </div>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="createTenant()">Create</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="createTenant()">Create Tenant</button>
         </div>
     </div>
 </div>

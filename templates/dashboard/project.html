@@ -4,41 +4,39 @@
 <div class="app-shell">
     {% include "sidebar.html" %}
     <main class="app-content">
-        <ul class="uk-breadcrumb">
+        <ul class="breadcrumb">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><span>{{ project_name }}</span></li>
+            <li><span class="current">{{ project_name }}</span></li>
         </ul>
 
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
-            <h2 class="uk-margin-remove">{{ project_name }} — Endpoints</h2>
-            <button class="uk-button uk-button-primary uk-button-small"
-                    onclick="UIkit.modal('#new-endpoint-dialog').show()">New Endpoint</button>
+        <div class="page-header">
+            <h2>{{ project_name }}</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal('new-endpoint-dialog')">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> New Endpoint
+            </button>
         </div>
 
         {% if endpoints.is_empty() %}
         <div class="empty-state">
-            <p><span uk-icon="icon: server; ratio: 2" class="uk-text-muted"></span></p>
-            <p>No endpoints yet. Create one to start receiving submissions.</p>
+            <div class="empty-icon"><i data-lucide="radio" style="width:24px;height:24px;color:#94a3b8;"></i></div>
+            <p class="text-base font-medium text-neutral-500">No endpoints yet</p>
+            <p class="text-sm">Create one to start receiving submissions.</p>
         </div>
         {% else %}
-        <div class="uk-card uk-card-default">
-            <div class="uk-overflow-auto">
-                <table class="uk-table uk-table-hover uk-table-divider uk-table-small uk-table-middle uk-margin-remove">
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Slug</th>
-                            <th>ID</th>
                             <th>Created</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ep in endpoints %}
                         <tr>
-                            <td><a href="/endpoints/{{ ep.slug }}">{{ ep.name }}</a></td>
-                            <td><code>{{ ep.slug }}</code></td>
-                            <td><code class="uk-text-small">{{ ep.id }}</code></td>
-                            <td>{{ ep.created_at.format("%Y-%m-%d") }}</td>
+                            <td><a href="/endpoints/{{ ep.id }}">{{ ep.name }}</a></td>
+                            <td class="text-neutral-400 text-sm">{{ ep.created_at.format("%Y-%m-%d") }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -49,45 +47,31 @@
     </main>
 </div>
 
-<div id="new-endpoint-dialog" uk-modal>
-    <div class="uk-modal-dialog">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <div class="uk-modal-header">
-            <h2 class="uk-modal-title">New Endpoint</h2>
+<div id="new-endpoint-dialog" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>New Endpoint</h2>
         </div>
-        <div class="uk-modal-body">
-            <form id="new-endpoint-form" class="uk-form-stacked">
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="ep-name">Name</label>
-                    <input class="uk-input" type="text" id="ep-name" name="name" required>
-                </div>
-                <div class="uk-margin">
-                    <label class="uk-form-label" for="ep-slug">Slug</label>
-                    <input class="uk-input" type="text" id="ep-slug" name="slug" required pattern="[a-z0-9\-]+">
-                </div>
-            </form>
+        <div class="modal-body">
+            <label class="form-label" for="ep-name">Name</label>
+            <input class="form-input" type="text" id="ep-name" name="name" placeholder="Contact Form" required>
         </div>
-        <div class="uk-modal-footer uk-text-right">
-            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
-            <button class="uk-button uk-button-primary" type="button" onclick="createEndpoint()">Create</button>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" type="button" onclick="createEndpoint()">Create Endpoint</button>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('ep-name').addEventListener('input', (e) => {
-    document.getElementById('ep-slug').value = e.target.value
-        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-});
-
 async function createEndpoint() {
     const name = document.getElementById('ep-name').value;
-    const slug = document.getElementById('ep-slug').value;
+    if (!name.trim()) return;
     const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
     const res = await fetch(`/api/v1/projects/{{ project_id }}/endpoints`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-        body: JSON.stringify({name, slug})
+        body: JSON.stringify({name})
     });
     if (res.ok) { location.reload(); }
     else { const d = await res.json(); alert(d.error); }
