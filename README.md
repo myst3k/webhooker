@@ -2,7 +2,7 @@
 
 A self-hosted submission endpoint. Not a form builder — just catch, store, notify.
 
-Webhooker accepts POST data from anywhere — HTML forms, scripts, webhooks, IoT devices, cron jobs — and stores it. Define expected fields or don't. It captures everything regardless, sorts what it recognizes, and runs your notification pipeline.
+Webhooker accepts POST data from anywhere — HTML forms, scripts, webhooks, IoT devices, cron jobs — and stores it. Define expected fields or don't. It captures everything regardless, sorts what it recognizes, and fires your notification pipeline.
 
 ## Why
 
@@ -13,9 +13,9 @@ That's Webhooker. One endpoint, one POST, done.
 ## Features
 
 - **Accept anything** — JSON, form-urlencoded, multipart. From any source.
-- **Smart field sorting** — Define expected fields and incoming data gets sorted into matched (`data`), unmatched (`extras`), and a raw copy of the original payload.
-- **Action pipeline** — Pluggable notification modules that fire on every submission. Email, webhooks, Discord, Slack — or write your own.
-- **Multi-tenant isolation** — Give others their own sandbox on your instance. They can't see your data, you can't accidentally see theirs (unless you're the admin).
+- **Smart field sorting** — Define expected fields and incoming data gets sorted into matched (`data`), unmatched (`extras`), and a raw copy of the original payload. Or define nothing and everything goes to `data`.
+- **Action pipeline** — Pluggable notification modules that fire on every submission. Email and webhook built in.
+- **Multi-tenant isolation** — Give others their own sandbox on your instance. Fully isolated projects, endpoints, and submissions.
 - **Built-in dashboard** — View, filter, search, and export submissions. No separate frontend to deploy.
 - **Self-hosted** — Single binary + Postgres. Your data stays on your server.
 
@@ -31,11 +31,11 @@ cp .env.example .env
 docker compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and register your admin account.
+Open [http://localhost:3000](http://localhost:3000) and register your admin account (first registration only).
 
 ### From Source
 
-Requires Rust (2024 edition) and Postgres 18.
+Requires Rust and Postgres 18+.
 
 ```bash
 git clone https://github.com/myst3k/webhooker.git
@@ -49,7 +49,7 @@ cargo run
 
 ### 1. Create an endpoint
 
-After logging in, create a project and add an endpoint. Optionally define expected fields:
+Log in, create a project, add an endpoint. Optionally define the fields you expect:
 
 ```json
 [
@@ -67,7 +67,7 @@ curl -X POST https://your-instance.com/v1/e/{endpoint_id} \
   -d '{"name": "Jane", "email": "jane@example.com", "message": "Hello", "utm_source": "google"}'
 ```
 
-Or use a plain HTML form:
+Or a plain HTML form:
 
 ```html
 <form action="https://your-instance.com/v1/e/{endpoint_id}" method="POST">
@@ -89,50 +89,35 @@ Incoming: { "name": "Jane", "email": "jane@example.com", "message": "Hello", "ut
 → raw:    (original payload, untouched)
 ```
 
-If no fields are defined, everything goes to `data`.
+No fields defined? Everything goes to `data`.
 
-### 4. Actions fire
+### 4. View in the dashboard
 
-Configure notification actions per endpoint — email alerts, webhook forwarding, Discord/Slack messages. Actions run asynchronously; the submission response returns immediately.
+Submissions show up in a searchable, filterable table. Expand any row to see the full payload, extras, and metadata (IP, user-agent, referrer). Export to CSV or JSON.
 
 ## Action Modules
 
-Webhooker uses a pluggable module system. Built-in modules:
+Configure actions per endpoint — they fire on every new submission.
 
-| Module | What it does |
-|--------|-------------|
-| **Email** | SMTP notification (per-tenant SMTP config) |
-| **Webhook** | Forward submission to any URL via HTTP POST |
+| Module | Status | Description |
+|--------|--------|-------------|
+| **Webhook** | ✅ Ready | Forward submissions to any URL via HTTP POST |
+| **Email** | 🚧 WIP | SMTP notifications using per-tenant SMTP config |
+| **Discord** | 📋 Planned | Post to Discord webhooks |
+| **Slack** | 📋 Planned | Post to Slack webhooks |
 
-Each tenant configures their own SMTP credentials — your notification emails come from your mail server, not anyone else's.
-
-Writing a custom module is straightforward — implement the `ActionModule` trait and register it.
+The module system is pluggable — implement the `ActionModule` trait to add your own.
 
 ## Multi-Tenancy
 
-Webhooker supports isolated tenants for shared instances. This isn't SaaS multi-tenancy — it's "give someone else their own space."
+Tenants are isolated sandboxes on a shared instance. Not SaaS — just "give someone their own space."
 
-- **System admin** creates tenants and user accounts
+- System admin creates tenants and user accounts
 - Each user belongs to one tenant
-- Tenants are fully isolated — separate projects, endpoints, submissions, and SMTP configs
-- Registration is closed by default — the admin controls who gets access
-
-```
-You (system admin)
-├── Your Tenant
-│   └── Project: Marketing Site
-│       └── Endpoint: Contact Form
-│
-└── Dave's Tenant
-    └── Project: Campaign Pages
-        └── Endpoint: Newsletter Signup
-```
-
-Dave sees only his stuff.
+- Tenants can't see each other's data
+- Registration is closed by default
 
 ## Configuration
-
-All configuration via environment variables:
 
 ```bash
 # Required
@@ -140,7 +125,7 @@ DATABASE_URL=postgres://user:pass@host:5432/webhooker
 JWT_SECRET=your-random-secret
 WEBHOOKER_ENCRYPTION_KEY=your-32-char-encryption-key
 
-# System SMTP (for password resets, account notifications)
+# System SMTP (password resets, account notifications)
 WEBHOOKER_SMTP_HOST=smtp.example.com
 WEBHOOKER_SMTP_PORT=587
 WEBHOOKER_SMTP_USER=system@example.com
@@ -148,48 +133,22 @@ WEBHOOKER_SMTP_PASS=app-password
 WEBHOOKER_SMTP_FROM=noreply@example.com
 
 # Optional
-WEBHOOKER_HOST=0.0.0.0                    # Listen address
-WEBHOOKER_PORT=3000                        # Listen port
+WEBHOOKER_HOST=0.0.0.0
+WEBHOOKER_PORT=3000
 WEBHOOKER_BASE_URL=https://webhooker.example.com
-WEBHOOKER_REGISTRATION=closed              # closed | open
-WEBHOOKER_MAX_BODY_SIZE=1048576            # Max request body (bytes)
-WEBHOOKER_TRUSTED_PROXIES=10.0.0.0/8       # For X-Forwarded-For
+WEBHOOKER_REGISTRATION=closed
+WEBHOOKER_MAX_BODY_SIZE=1048576
+WEBHOOKER_TRUSTED_PROXIES=10.0.0.0/8
 WEBHOOKER_LOG_LEVEL=info
 ```
 
-Tenant SMTP is configured per-tenant in the dashboard, not in environment variables.
+Tenant SMTP is configured per-tenant in the dashboard settings.
 
-## API
+## Anti-Spam
 
-### Submission (public)
-```
-POST /v1/e/{endpoint_id}
-```
-
-### Dashboard API (authenticated)
-```
-# Auth
-POST   /api/v1/auth/login
-POST   /api/v1/auth/refresh
-POST   /api/v1/auth/logout
-
-# Projects & Endpoints
-GET    /api/v1/projects
-POST   /api/v1/projects
-GET    /api/v1/projects/{id}/endpoints
-POST   /api/v1/projects/{id}/endpoints
-
-# Submissions
-GET    /api/v1/endpoints/{id}/submissions
-GET    /api/v1/endpoints/{id}/submissions/export?format=csv
-
-# Actions
-GET    /api/v1/endpoints/{id}/actions
-POST   /api/v1/endpoints/{id}/actions
-GET    /api/v1/modules
-```
-
-Full API documentation: see [DESIGN.md](DESIGN.md)
+- **Honeypot fields** — configurable per endpoint, silent rejection
+- **Rate limiting** — per IP per endpoint
+- **CORS restrictions** — optional origin allowlist per endpoint
 
 ## Tech Stack
 
@@ -197,27 +156,20 @@ Full API documentation: see [DESIGN.md](DESIGN.md)
 |---|---|
 | **Language** | Rust |
 | **Framework** | Axum |
-| **Database** | PostgreSQL 18 (native UUIDv7) |
-| **Templates** | Askama |
-| **Interactivity** | HTMX |
+| **Database** | PostgreSQL 18 |
+| **Templates** | Askama + HTMX |
 | **Auth** | Argon2id + JWT |
-| **Encryption** | AES-256-GCM (tenant SMTP credentials) |
 
-## Anti-Spam
+## Roadmap
 
-- **Honeypot fields** — configurable per endpoint, silent rejection
-- **Rate limiting** — per IP per endpoint, configurable limits
-- **CORS restrictions** — optional origin allowlist per endpoint
+See [DESIGN.md](DESIGN.md) for the full design spec and [TODO.md](TODO.md) for known issues.
 
-## Security
-
-- Argon2id password hashing
-- JWT access tokens (15min) with refresh token rotation
-- Refresh token reuse detection (compromise signal → revoke all)
-- Tenant isolation enforced at the database query level
-- Tenant SMTP credentials encrypted at rest (AES-256-GCM)
-- Audit logging for all mutations
-- Brute force protection on login
+- [ ] Async action queue (Postgres-backed, currently synchronous)
+- [ ] Email action module completion (tenant SMTP loading)
+- [ ] Discord and Slack action modules
+- [ ] Conditional action execution (filters)
+- [ ] Submission search (full-text)
+- [ ] Data retention auto-purge
 
 ## License
 
