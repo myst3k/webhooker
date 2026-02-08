@@ -10,7 +10,7 @@
 ## 🟡 MEDIUM
 
 - [ ] **Registration race condition** — `src/routes/auth.rs:60-62` — Two concurrent first-user registrations could both become system admin. Use DB lock or unique constraint.
-- [ ] **Export query not tenant-scoped** — `src/db/submissions.rs:95-102` — Route defends it but query should also scope by tenant for defense-in-depth.
+- [x] **Export query not tenant-scoped** — Added tenant_id join to list_for_export query.
 - [ ] **Crypto key uses raw SHA-256** — `src/crypto.rs:6-10` — Use HKDF or Argon2 for key derivation instead.
 - [ ] **Rate limit cleanup never called** — `src/rate_limit.rs` — DashMaps grow unbounded. Add periodic Tokio cleanup task.
 - [ ] **Cookie security flags missing** — access_token cookie not set with HttpOnly/Secure/SameSite.

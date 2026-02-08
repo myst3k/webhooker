@@ -156,11 +156,17 @@ pub async fn bulk_delete(
 pub async fn list_for_export(
     pool: &PgPool,
     endpoint_id: Uuid,
+    tenant_id: Uuid,
 ) -> Result<Vec<Submission>, sqlx::Error> {
     sqlx::query_as::<_, Submission>(
-        "SELECT * FROM submissions WHERE endpoint_id = $1 ORDER BY created_at DESC",
+        "SELECT s.* FROM submissions s
+         JOIN endpoints e ON s.endpoint_id = e.id
+         JOIN projects p ON e.project_id = p.id
+         WHERE s.endpoint_id = $1 AND p.tenant_id = $2
+         ORDER BY s.created_at DESC",
     )
     .bind(endpoint_id)
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
 }

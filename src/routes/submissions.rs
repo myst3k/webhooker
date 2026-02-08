@@ -131,7 +131,8 @@ pub async fn export(
         .await?
         .ok_or_else(|| AppError::NotFound("Endpoint not found".to_string()))?;
 
-    let submissions = db::submissions::list_for_export(&state.pool, endpoint_id).await?;
+    let submissions =
+        db::submissions::list_for_export(&state.pool, endpoint_id, auth.tenant_id()).await?;
 
     match params.format.as_deref().unwrap_or("json") {
         "csv" => {
