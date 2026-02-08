@@ -11,13 +11,9 @@ use webhooker::db;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load .env if present
     let _ = dotenvy::dotenv();
-
-    // Load config
     let config = Config::from_env().expect("Failed to load configuration");
 
-    // Init tracing
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
             EnvFilter::new(&config.log_level)
@@ -26,14 +22,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting Webhooker");
 
-    // Create database pool
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&config.database_url)
         .await
         .expect("Failed to connect to database");
 
-    // Run migrations
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
@@ -41,7 +35,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Migrations applied");
 
-    // Seed admin user if no users exist
     let user_count = db::users::count_all(&pool)
         .await
         .expect("Failed to count users");
@@ -80,7 +73,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let addr = SocketAddr::new(config.host, config.port);
-    let app = webhooker::build_app(pool, config);
+    let worker_count = config.worker_count;
+    let (app, state) = webhooker::build_app(pool, config);
+
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+
+    let worker_pool = webhooker::worker::run_pool(state, shutdown_rx, worker_count);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("Listening on {addr}");
@@ -91,6 +89,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .with_graceful_shutdown(shutdown_signal())
     .await?;
+
+    let _ = shutdown_tx.send(true);
+    let _ = worker_pool.join();
 
     Ok(())
 }

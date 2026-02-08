@@ -11,7 +11,7 @@
             <thead>
                 <tr>
                     {% for col in field_names %}
-                    {% let opposite_order %}
+                    {% decl opposite_order %}
                     {% if sort_by == *col %}{% if sort_order == "asc" %}{% let opposite_order = "desc" %}{% else %}{% let opposite_order = "asc" %}{% endif %}{% else %}{% let opposite_order = "asc" %}{% endif %}
                     <th class="whitespace-nowrap cursor-pointer select-none hover:text-neutral-600"
                         hx-get="/htmx/submissions/{{ endpoint_id }}?sort_by={{ col }}&amp;sort_order={{ opposite_order }}&amp;search={{ search }}"

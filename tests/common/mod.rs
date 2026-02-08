@@ -242,11 +242,14 @@ pub async fn spawn_app() -> TestApp {
         registration: RegistrationMode::Closed,
         max_body_size: 1_048_576,
         trusted_proxies: vec![],
+        webhook_ssrf_mode: webhooker::config::SsrfMode::Relaxed,
+        allowed_webhook_cidrs: vec![],
+        worker_count: 1,
         log_level: "warn".to_string(),
         smtp: None,
     };
 
-    let app = webhooker::build_app(pool.clone(), config);
+    let (app, _state) = webhooker::build_app(pool.clone(), config);
 
     // Bind to random port
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

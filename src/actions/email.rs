@@ -72,11 +72,18 @@ impl ActionModule for EmailModule {
             config["subject"].as_str().unwrap_or_default(),
             ctx,
         );
-        let body = template::render(
-            config["body"].as_str().unwrap_or_default(),
-            ctx,
-        );
         let is_html = config["html"].as_bool().unwrap_or(false);
+        let body = if is_html {
+            template::render_html(
+                config["body"].as_str().unwrap_or_default(),
+                ctx,
+            )
+        } else {
+            template::render(
+                config["body"].as_str().unwrap_or_default(),
+                ctx,
+            )
+        };
 
         let from = if let Some(name) = &smtp_config.from_name {
             format!("{} <{}>", name, smtp_config.from_address)

@@ -8,4 +8,5 @@ pub mod endpoints;
 pub mod submissions;
 pub mod actions;
 pub mod action_log;
+pub mod action_queue;
 pub mod audit;

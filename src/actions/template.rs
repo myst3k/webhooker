@@ -16,6 +16,24 @@ pub fn render(template: &str, ctx: &ActionContext) -> String {
         .to_string()
 }
 
+/// Like `render()` but HTML-escapes interpolated values. Use for HTML email bodies.
+pub fn render_html(template: &str, ctx: &ActionContext) -> String {
+    TEMPLATE_RE
+        .replace_all(template, |caps: &regex::Captures| {
+            let path = &caps[1];
+            html_escape(&resolve(path, ctx).unwrap_or_default())
+        })
+        .to_string()
+}
+
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#x27;")
+}
+
 fn resolve(path: &str, ctx: &ActionContext) -> Option<String> {
     let parts: Vec<&str> = path.splitn(2, '.').collect();
     match parts.as_slice() {

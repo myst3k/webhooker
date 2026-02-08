@@ -9,6 +9,7 @@ pub mod submission;
 pub mod action;
 pub mod action_log;
 pub mod audit_event;
+pub mod action_queue;
 
 pub use tenant::Tenant;
 pub use user::User;
@@ -21,3 +22,4 @@ pub use submission::Submission;
 pub use action::Action;
 pub use action_log::ActionLog;
 pub use audit_event::AuditEvent;
+pub use action_queue::ActionQueueItem;

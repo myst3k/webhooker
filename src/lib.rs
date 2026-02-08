@@ -12,12 +12,14 @@ pub mod email;
 pub mod submission;
 pub mod crypto;
 pub mod rate_limit;
+pub mod worker;
 
 use std::sync::Arc;
 
 use axum::http::{HeaderName, HeaderValue};
 use axum::Router;
 use sqlx::PgPool;
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 
@@ -31,13 +33,16 @@ use crate::email::SystemMailer;
 use crate::rate_limit::{LoginRateLimiter, SubmissionRateLimiter};
 use crate::state::{AppState, SharedState};
 
-pub fn build_app(pool: PgPool, config: Config) -> Router {
-    // Build module registry
+pub fn build_app(pool: PgPool, config: Config) -> (Router, SharedState) {
+    let max_body_size = config.max_body_size;
+
     let mut modules = ModuleRegistry::new();
-    modules.register(Arc::new(WebhookModule::new()));
+    modules.register(Arc::new(WebhookModule::new(
+        config.webhook_ssrf_mode.clone(),
+        config.allowed_webhook_cidrs.clone(),
+    )));
     modules.register(Arc::new(EmailModule::new(pool.clone(), config.encryption_key.clone())));
 
-    // Build system mailer
     let system_mailer = config.smtp.as_ref().and_then(|smtp| {
         match SystemMailer::new(smtp) {
             Ok(mailer) => {
@@ -60,8 +65,7 @@ pub fn build_app(pool: PgPool, config: Config) -> Router {
         login_limiter: LoginRateLimiter::new(),
     });
 
-    // Security headers
-    let security_headers = Router::new()
+    let router = Router::new()
         .merge(routes::api_routes())
         .merge(routes::ingest_routes())
         .merge(views::view_routes().layer(axum::middleware::from_fn(redirect_unauthorized)))
@@ -79,9 +83,10 @@ pub fn build_app(pool: PgPool, config: Config) -> Router {
             HeaderName::from_static("referrer-policy"),
             HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
-        .with_state(state);
+        .layer(RequestBodyLimitLayer::new(max_body_size))
+        .with_state(state.clone());
 
-    security_headers
+    (router, state)
 }
 
 async fn health() -> &'static str {

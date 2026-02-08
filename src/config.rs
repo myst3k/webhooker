@@ -13,6 +13,9 @@ pub struct Config {
     pub registration: RegistrationMode,
     pub max_body_size: usize,
     pub trusted_proxies: Vec<IpNet>,
+    pub webhook_ssrf_mode: SsrfMode,
+    pub allowed_webhook_cidrs: Vec<IpNet>,
+    pub worker_count: usize,
     pub log_level: String,
     pub smtp: Option<SmtpConfig>,
 }
@@ -30,6 +33,12 @@ pub struct SmtpConfig {
 pub enum RegistrationMode {
     Open,
     Closed,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SsrfMode {
+    Strict,
+    Relaxed,
 }
 
 impl Config {
@@ -67,6 +76,25 @@ impl Config {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        let webhook_ssrf_mode = match env_or("WEBHOOKER_WEBHOOK_SSRF", "strict").as_str() {
+            "relaxed" => SsrfMode::Relaxed,
+            _ => SsrfMode::Strict,
+        };
+
+        let allowed_webhook_cidrs: Vec<IpNet> = env_or("WEBHOOKER_ALLOWED_WEBHOOK_CIDRS", "")
+            .split(',')
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| {
+                s.trim()
+                    .parse()
+                    .map_err(|e| format!("Invalid WEBHOOKER_ALLOWED_WEBHOOK_CIDRS entry '{s}': {e}"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let worker_count: usize = env_or("WEBHOOKER_WORKER_COUNT", "2")
+            .parse()
+            .map_err(|e| format!("Invalid WEBHOOKER_WORKER_COUNT: {e}"))?;
+
         let log_level = env_or("WEBHOOKER_LOG_LEVEL", "info");
 
         let smtp = match (
@@ -98,6 +126,9 @@ impl Config {
             registration,
             max_body_size,
             trusted_proxies,
+            webhook_ssrf_mode,
+            allowed_webhook_cidrs,
+            worker_count,
             log_level,
             smtp,
         })
