@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use crate::models::User;
 
-pub async fn create(
-    pool: &PgPool,
+pub async fn create<'e, E: sqlx::PgExecutor<'e>>(
+    executor: E,
     tenant_id: Uuid,
     email: &str,
     password_hash: &str,
@@ -22,7 +22,7 @@ pub async fn create(
     .bind(name)
     .bind(role)
     .bind(is_system_admin)
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
 }
 
@@ -40,9 +40,9 @@ pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<Option<User>, sqlx::E
         .await
 }
 
-pub async fn count_all(pool: &PgPool) -> Result<i64, sqlx::Error> {
+pub async fn count_all<'e, E: sqlx::PgExecutor<'e>>(executor: E) -> Result<i64, sqlx::Error> {
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
-        .fetch_one(pool)
+        .fetch_one(executor)
         .await?;
     Ok(row.0)
 }

@@ -3,13 +3,17 @@ use uuid::Uuid;
 
 use crate::models::Tenant;
 
-pub async fn create(pool: &PgPool, name: &str, slug: &str) -> Result<Tenant, sqlx::Error> {
+pub async fn create<'e, E: sqlx::PgExecutor<'e>>(
+    executor: E,
+    name: &str,
+    slug: &str,
+) -> Result<Tenant, sqlx::Error> {
     sqlx::query_as::<_, Tenant>(
         "INSERT INTO tenants (name, slug) VALUES ($1, $2) RETURNING *",
     )
     .bind(name)
     .bind(slug)
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
 }
 

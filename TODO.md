@@ -2,10 +2,10 @@
 
 ## 🟠 HIGH
 
-- [ ] **No action queue — actions run synchronously** — No action_queue migration, no worker loop. Submissions block on external calls. Need Postgres-backed queue per DESIGN.md.
-- [ ] **Webhook SSRF** — `src/actions/webhook.rs` — No URL validation. Block private/reserved IPs and metadata endpoints.
-- [ ] **Template injection** — `src/actions/template.rs` — User data interpolated into HTML without escaping.
-- [ ] **No body size limit enforced** — `config.max_body_size` parsed but never applied as middleware. Add `RequestBodyLimitLayer`.
+- [x] **No action queue — actions run synchronously** — Postgres-backed queue with dedicated worker pool.
+- [x] **Webhook SSRF** — URL validation with configurable strict/relaxed mode and CIDR allowlist.
+- [x] **Template injection** — HTML-escaped interpolation for HTML email bodies.
+- [x] **No body size limit enforced** — `RequestBodyLimitLayer` applied globally.
 
 ## 🟡 MEDIUM
 
@@ -16,7 +16,7 @@
 - [ ] **Cookie security flags missing** — access_token cookie not set with HttpOnly/Secure/SameSite.
 - [ ] **System admin can delete own tenant** — `src/routes/admin.rs:63-74` — Add guard to prevent self-destruction.
 - [ ] **Sort column injection fragile** — `src/db/submissions.rs:46-48` — Replace format!() SQL interpolation with enum.
-- [ ] **Missing action_queue migration** — Add table per DESIGN.md.
+- [x] **Missing action_queue migration** — Added with async worker pool.
 
 ## 🔵 LOW
 

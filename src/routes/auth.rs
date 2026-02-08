@@ -73,14 +73,6 @@ pub async fn register(
     State(state): State<SharedState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    // Only allow registration if no users exist (bootstrap)
-    let count = db::users::count_all(&state.pool).await?;
-    if count > 0 {
-        return Err(AppError::Forbidden(
-            "Registration is disabled. Contact your system administrator.".to_string(),
-        ));
-    }
-
     if req.email.is_empty() || req.password.is_empty() || req.name.is_empty() {
         return Err(AppError::BadRequest("All fields are required".to_string()));
     }
@@ -92,17 +84,28 @@ pub async fn register(
     }
 
     let pw_hash =
-        password::hash(&req.password).map_err(|e| AppError::Internal(e))?;
+        password::hash(&req.password).map_err(AppError::Internal)?;
 
-    // Create default tenant
+    // Advisory lock prevents concurrent bootstrap registrations
+    let mut tx = state.pool.begin().await?;
+    sqlx::query("SELECT pg_advisory_xact_lock(1)")
+        .execute(&mut *tx)
+        .await?;
+
+    let count = db::users::count_all(&mut *tx).await?;
+    if count > 0 {
+        return Err(AppError::Forbidden(
+            "Registration is disabled. Contact your system administrator.".to_string(),
+        ));
+    }
+
     let slug = slugify(&req.name);
-    let tenant = db::tenants::create(&state.pool, &format!("{}'s Workspace", req.name), &slug)
+    let tenant = db::tenants::create(&mut *tx, &format!("{}'s Workspace", req.name), &slug)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to create tenant: {e}")))?;
 
-    // Create system admin + owner user
     let user = db::users::create(
-        &state.pool,
+        &mut *tx,
         tenant.id,
         &req.email,
         &pw_hash,
@@ -111,6 +114,8 @@ pub async fn register(
         true,
     )
     .await?;
+
+    tx.commit().await?;
 
     // Generate tokens
     let claims = Claims::new(user.id, tenant.id, "owner".to_string(), true);
