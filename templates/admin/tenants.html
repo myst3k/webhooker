@@ -66,8 +66,6 @@
 </div>
 
 <script>
-const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
 document.getElementById('tenant-name').addEventListener('input', (e) => {
     document.getElementById('tenant-slug').value = e.target.value
         .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -76,7 +74,7 @@ document.getElementById('tenant-name').addEventListener('input', (e) => {
 async function createTenant() {
     const res = await fetch('/api/v1/admin/tenants', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             name: document.getElementById('tenant-name').value,
             slug: document.getElementById('tenant-slug').value
@@ -89,8 +87,7 @@ async function createTenant() {
 async function deleteTenant(id, name) {
     if (!confirm(`Delete tenant "${name}" and ALL its data?`)) return;
     const res = await fetch(`/api/v1/admin/tenants/${id}`, {
-        method: 'DELETE',
-        headers: {'Authorization': `Bearer ${token}`}
+        method: 'DELETE'
     });
     if (res.ok) { location.reload(); }
     else { const d = await res.json(); alert(d.error); }

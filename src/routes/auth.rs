@@ -1,5 +1,7 @@
 use axum::extract::State;
 use axum::Json;
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
 
 use serde::{Deserialize, Serialize};
@@ -27,16 +29,6 @@ pub struct LoginRequest {
 }
 
 #[derive(Deserialize)]
-pub struct RefreshRequest {
-    pub refresh_token: String,
-}
-
-#[derive(Deserialize)]
-pub struct LogoutRequest {
-    pub refresh_token: String,
-}
-
-#[derive(Deserialize)]
 pub struct ForgotPasswordRequest {
     pub email: String,
 }
@@ -58,6 +50,38 @@ pub struct MessageResponse {
     pub message: String,
 }
 
+fn auth_cookies(access_token: &str, refresh_token: &str) -> CookieJar {
+    let access = Cookie::build(("access_token", access_token.to_string()))
+        .path("/")
+        .http_only(true)
+        .secure(true)
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::minutes(15))
+        .build();
+
+    let refresh = Cookie::build(("refresh_token", refresh_token.to_string()))
+        .path("/")
+        .http_only(true)
+        .secure(true)
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::days(7))
+        .build();
+
+    CookieJar::new().add(access).add(refresh)
+}
+
+fn clear_auth_cookies() -> CookieJar {
+    let access = Cookie::build(("access_token", ""))
+        .path("/")
+        .max_age(time::Duration::ZERO)
+        .build();
+    let refresh = Cookie::build(("refresh_token", ""))
+        .path("/")
+        .max_age(time::Duration::ZERO)
+        .build();
+    CookieJar::new().add(access).add(refresh)
+}
+
 fn generate_refresh_token() -> String {
     let bytes: [u8; 32] = rand::random();
     hex::encode(bytes)
@@ -72,7 +96,7 @@ fn hash_token(token: &str) -> String {
 pub async fn register(
     State(state): State<SharedState>,
     Json(req): Json<RegisterRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
+) -> Result<(CookieJar, Json<AuthResponse>), AppError> {
     if req.email.is_empty() || req.password.is_empty() || req.name.is_empty() {
         return Err(AppError::BadRequest("All fields are required".to_string()));
     }
@@ -143,16 +167,17 @@ pub async fn register(
     )
     .await;
 
-    Ok(Json(AuthResponse {
+    let jar = auth_cookies(&access_token, &refresh);
+    Ok((jar, Json(AuthResponse {
         access_token,
         refresh_token: refresh,
-    }))
+    })))
 }
 
 pub async fn login(
     State(state): State<SharedState>,
     Json(req): Json<LoginRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
+) -> Result<(CookieJar, Json<AuthResponse>), AppError> {
     // Rate limit check
     if let Err(_) = state.login_limiter.check(&req.email) {
         return Err(AppError::RateLimited(
@@ -202,23 +227,28 @@ pub async fn login(
     )
     .await;
 
-    Ok(Json(AuthResponse {
+    let jar = auth_cookies(&access_token, &refresh);
+    Ok((jar, Json(AuthResponse {
         access_token,
         refresh_token: refresh,
-    }))
+    })))
 }
 
 pub async fn refresh(
     State(state): State<SharedState>,
-    Json(req): Json<RefreshRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
-    let token_hash = hash_token(&req.refresh_token);
+    jar: CookieJar,
+) -> Result<(CookieJar, Json<AuthResponse>), AppError> {
+    let refresh_value = jar
+        .get("refresh_token")
+        .map(|c| c.value().to_string())
+        .ok_or_else(|| AppError::Unauthorized("Missing refresh token".to_string()))?;
+
+    let token_hash = hash_token(&refresh_value);
 
     let stored = db::refresh_tokens::find_by_hash(&state.pool, &token_hash)
         .await?
         .ok_or_else(|| AppError::Unauthorized("Invalid refresh token".to_string()))?;
 
-    // Reuse detection: if token was already used, nuke ALL tokens for user
     if stored.used {
         tracing::warn!(
             "Refresh token reuse detected for user {}. Nuking all sessions.",
@@ -230,20 +260,16 @@ pub async fn refresh(
         ));
     }
 
-    // Check expiry
     if stored.expires_at < Utc::now() {
         return Err(AppError::Unauthorized("Refresh token expired".to_string()));
     }
 
-    // Mark as used
     db::refresh_tokens::mark_used(&state.pool, stored.id).await?;
 
-    // Load user
     let user = db::users::find_by_id(&state.pool, stored.user_id)
         .await?
         .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
 
-    // Issue new tokens
     let claims = Claims::new(
         user.id,
         user.tenant_id,
@@ -263,22 +289,25 @@ pub async fn refresh(
     )
     .await?;
 
-    Ok(Json(AuthResponse {
+    let new_jar = auth_cookies(&access_token, &new_refresh);
+    Ok((new_jar, Json(AuthResponse {
         access_token,
         refresh_token: new_refresh,
-    }))
+    })))
 }
 
 pub async fn logout(
     State(state): State<SharedState>,
-    Json(req): Json<LogoutRequest>,
-) -> Result<Json<MessageResponse>, AppError> {
-    let token_hash = hash_token(&req.refresh_token);
-    db::refresh_tokens::delete_by_hash(&state.pool, &token_hash).await?;
+    jar: CookieJar,
+) -> Result<(CookieJar, Json<MessageResponse>), AppError> {
+    if let Some(cookie) = jar.get("refresh_token") {
+        let token_hash = hash_token(cookie.value());
+        db::refresh_tokens::delete_by_hash(&state.pool, &token_hash).await?;
+    }
 
-    Ok(Json(MessageResponse {
+    Ok((clear_auth_cookies(), Json(MessageResponse {
         message: "Logged out successfully".to_string(),
-    }))
+    })))
 }
 
 pub async fn forgot_password(
@@ -365,7 +394,7 @@ pub async fn change_password(
     State(state): State<SharedState>,
     auth: AuthUser,
     Json(req): Json<ChangePasswordRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
+) -> Result<(CookieJar, Json<AuthResponse>), AppError> {
     if req.new_password.len() < 8 {
         return Err(AppError::BadRequest(
             "Password must be at least 8 characters".to_string(),
@@ -422,10 +451,11 @@ pub async fn change_password(
     )
     .await;
 
-    Ok(Json(AuthResponse {
+    let jar = auth_cookies(&access_token, &refresh);
+    Ok((jar, Json(AuthResponse {
         access_token,
         refresh_token: refresh,
-    }))
+    })))
 }
 
 fn slugify(s: &str) -> String {

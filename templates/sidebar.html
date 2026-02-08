@@ -23,7 +23,7 @@
     <div class="sidebar-footer">
         <span class="user-name">{{ user_name }}</span>
         <a href="#"
-           onclick="fetch('/api/v1/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:''})}).then(()=>{document.cookie='access_token=;path=/;max-age=0';document.cookie='refresh_token=;path=/;max-age=0';location.href='/';})">
+           onclick="fetch('/api/v1/auth/logout',{method:'POST'}).then(()=>{location.href='/';})">
             <i data-lucide="log-out" style="width:15px;height:15px;"></i> Logout
         </a>
     </div>

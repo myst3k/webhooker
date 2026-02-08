@@ -92,8 +92,6 @@
 </div>
 
 <script>
-const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
 async function createAction() {
     let config;
     try { config = JSON.parse(document.getElementById('action-config').value); }
@@ -101,7 +99,7 @@ async function createAction() {
 
     const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}/actions`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             action_type: document.getElementById('action-type').value,
             config,
@@ -115,8 +113,7 @@ async function createAction() {
 async function deleteAction(id) {
     if (!confirm('Delete this action?')) return;
     const res = await fetch(`/api/v1/actions/${id}`, {
-        method: 'DELETE',
-        headers: {'Authorization': `Bearer ${token}`}
+        method: 'DELETE'
     });
     if (res.ok) { location.reload(); }
     else { const d = await res.json(); alert(d.error); }

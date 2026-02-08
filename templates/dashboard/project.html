@@ -67,10 +67,9 @@
 async function createEndpoint() {
     const name = document.getElementById('ep-name').value;
     if (!name.trim()) return;
-    const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
     const res = await fetch(`/api/v1/projects/{{ project_id }}/endpoints`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name})
     });
     if (res.ok) { location.reload(); }

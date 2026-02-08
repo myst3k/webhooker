@@ -97,12 +97,10 @@
 </div>
 
 <script>
-const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
 async function createUser() {
     const res = await fetch('/api/v1/admin/users', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             name: document.getElementById('user-name').value,
             email: document.getElementById('user-email').value,
@@ -118,8 +116,7 @@ async function createUser() {
 async function deleteUser(id, name) {
     if (!confirm(`Delete user "${name}"?`)) return;
     const res = await fetch(`/api/v1/admin/users/${id}`, {
-        method: 'DELETE',
-        headers: {'Authorization': `Bearer ${token}`}
+        method: 'DELETE'
     });
     if (res.ok) { location.reload(); }
     else { const d = await res.json(); alert(d.error); }

@@ -100,7 +100,7 @@ async fn refresh_token_rotation() {
     let resp = app
         .client
         .post(app.url("/api/v1/auth/refresh"))
-        .json(&json!({ "refresh_token": refresh }))
+        .header("cookie", format!("refresh_token={refresh}"))
         .send()
         .await
         .unwrap();
@@ -115,7 +115,7 @@ async fn refresh_token_rotation() {
     let resp2 = app
         .client
         .post(app.url("/api/v1/auth/refresh"))
-        .json(&json!({ "refresh_token": new_refresh }))
+        .header("cookie", format!("refresh_token={new_refresh}"))
         .send()
         .await
         .unwrap();
@@ -135,7 +135,7 @@ async fn refresh_token_reuse_detection() {
     let resp1 = app
         .client
         .post(app.url("/api/v1/auth/refresh"))
-        .json(&json!({ "refresh_token": refresh }))
+        .header("cookie", format!("refresh_token={refresh}"))
         .send()
         .await
         .unwrap();
@@ -145,7 +145,7 @@ async fn refresh_token_reuse_detection() {
     let resp2 = app
         .client
         .post(app.url("/api/v1/auth/refresh"))
-        .json(&json!({ "refresh_token": refresh }))
+        .header("cookie", format!("refresh_token={refresh}"))
         .send()
         .await
         .unwrap();
@@ -169,7 +169,7 @@ async fn logout_invalidates_refresh_token() {
     let resp = app
         .client
         .post(app.url("/api/v1/auth/logout"))
-        .json(&json!({ "refresh_token": refresh }))
+        .header("cookie", format!("refresh_token={refresh}"))
         .send()
         .await
         .unwrap();
@@ -179,7 +179,7 @@ async fn logout_invalidates_refresh_token() {
     let resp2 = app
         .client
         .post(app.url("/api/v1/auth/refresh"))
-        .json(&json!({ "refresh_token": refresh }))
+        .header("cookie", format!("refresh_token={refresh}"))
         .send()
         .await
         .unwrap();

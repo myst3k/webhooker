@@ -52,12 +52,10 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 password: form.password.value
             })
         });
-        const data = await res.json();
         if (res.ok) {
-            document.cookie = `access_token=${data.access_token};path=/;max-age=900;SameSite=Lax`;
-            document.cookie = `refresh_token=${data.refresh_token};path=/;max-age=604800;SameSite=Lax`;
             location.href = '/dashboard';
         } else {
+            const data = await res.json();
             alert(data.error || 'Login failed');
             btn.disabled = false;
             btn.textContent = 'Sign In';

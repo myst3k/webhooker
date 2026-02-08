@@ -88,8 +88,6 @@ function addFieldRow(name, type, required) {
 }
 
 async function saveFields() {
-    const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
     const rows = document.querySelectorAll('#fields-body tr');
     const fields = [];
     for (const row of rows) {
@@ -104,7 +102,7 @@ async function saveFields() {
 
     const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             name: '{{ endpoint.name }}',
             fields: fields.length ? fields : null

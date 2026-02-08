@@ -85,8 +85,6 @@
 </div>
 <script>
 async function saveSettings() {
-    const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
     const corsRaw = document.getElementById('cors-origins').value.trim();
     const corsOrigins = corsRaw ? corsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
     const retDays = document.getElementById('retention-days').value.trim();
@@ -103,7 +101,7 @@ async function saveSettings() {
 
     const res = await fetch(`/api/v1/endpoints/{{ endpoint_id }}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             name: document.getElementById('ep-name').value,
             settings

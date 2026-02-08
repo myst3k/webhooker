@@ -71,12 +71,10 @@
 </div>
 
 <script>
-const token = document.cookie.split(';').find(c => c.trim().startsWith('access_token='))?.split('=')[1];
-
 async function saveSMTP() {
     const res = await fetch('/api/v1/tenant/smtp', {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             host: document.getElementById('smtp-host').value,
             port: parseInt(document.getElementById('smtp-port').value),
@@ -97,7 +95,7 @@ async function testSMTP() {
     if (!to) return;
     const res = await fetch('/api/v1/tenant/smtp/test', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({to})
     });
     const d = await res.json();
@@ -107,8 +105,7 @@ async function testSMTP() {
 async function deleteSMTP() {
     if (!confirm('Remove SMTP configuration?')) return;
     const res = await fetch('/api/v1/tenant/smtp', {
-        method: 'DELETE',
-        headers: {'Authorization': `Bearer ${token}`}
+        method: 'DELETE'
     });
     if (res.ok) location.reload();
 }

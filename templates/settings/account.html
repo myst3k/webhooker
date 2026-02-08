@@ -84,12 +84,6 @@ document.getElementById('password-form').addEventListener('submit', async (e) =>
             throw new Error(err.error || 'Failed to change password');
         }
 
-        const data = await res.json();
-
-        // Set new cookies
-        document.cookie = `access_token=${data.access_token};path=/;SameSite=Lax`;
-        document.cookie = `refresh_token=${data.refresh_token};path=/;SameSite=Lax`;
-
         form.reset();
         alert('Password changed successfully.');
     } catch (err) {
