@@ -9,12 +9,12 @@
 
 ## 🟡 MEDIUM
 
-- [ ] **Registration race condition** — `src/routes/auth.rs:60-62` — Two concurrent first-user registrations could both become system admin. Use DB lock or unique constraint.
+- [x] **Registration race condition** — Advisory lock (`pg_advisory_xact_lock`) in transaction prevents concurrent bootstrap registrations.
 - [x] **Export query not tenant-scoped** — Added tenant_id join to list_for_export query.
 - [x] **Crypto key uses raw SHA-256** — Replaced with HKDF-SHA256 key derivation.
 - [x] **Rate limit cleanup never called** — Periodic cleanup task every 5 min, evicts entries older than 30 min.
 - [x] **Cookie security flags missing** — Server-side HttpOnly/Secure/SameSite=Lax cookies, removed JS cookie handling.
-- [ ] **System admin can delete own tenant** — `src/routes/admin.rs:63-74` — Add guard to prevent self-destruction.
+- [x] **System admin can delete own tenant** — Guard prevents deleting own tenant.
 - [ ] **Sort column injection fragile** — `src/db/submissions.rs:46-48` — Replace format!() SQL interpolation with enum.
 - [x] **Missing action_queue migration** — Added with async worker pool.
 

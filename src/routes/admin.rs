@@ -91,6 +91,12 @@ pub async fn delete_tenant(
 ) -> Result<Json<serde_json::Value>, AppError> {
     auth.require_system_admin()?;
 
+    if id == auth.tenant_id() {
+        return Err(AppError::BadRequest(
+            "Cannot delete your own tenant".to_string(),
+        ));
+    }
+
     db::tenants::delete(&state.pool, id).await?;
 
     audit::log_event(
